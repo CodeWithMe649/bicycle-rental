@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'dashboard')}">
+<body>
+<section>
+    <!-- Header -->
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+        <p class="text-gray-500">Welcome back, Christian! 👋</p>
+    </div>
+
+    <!-- Stat Metric Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-blue-100 border border-blue-200 p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bike"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Total Bikes</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalBikes}">24</h3>
+            </div>
+        </div>
+        <div class="bg-emerald-100 border border-emerald-200 p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="calendar"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Active Rentals</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${activeRentals}">8</h3>
+            </div>
+        </div>
+        <div class="bg-orange-100 border border-orange-200 p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center"><i data-lucide="users"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Total Users</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalUsers}">120</h3>
+            </div>
+        </div>
+        <div class="bg-indigo-100 border border-indigo-200 p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bar-chart-3"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Today's Earnings</p>
+                <h3 class="text-2xl font-bold text-gray-800">₱1,250</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Banner & Recent Activity Split -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Hero Card -->
+        <div class="lg:col-span-2 bg-gradient-to-r from-blue-700 to-indigo-900 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+            <div>
+                <h2 class="text-3xl font-extrabold mb-2">Bicycle Rental<br>Management System</h2>
+                <p class="text-blue-200 text-sm">Rent a bike. Enjoy the ride!</p>
+            </div>
+            <div>
+                <a th:href="@{/rentals}" class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition">
+                    New Rental <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Rentals Card -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800">Recent Rentals</h3>
+                <a th:href="@{/transactions}" class="text-xs text-blue-600 font-semibold hover:underline">View All →</a>
+            </div>
+            <div class="space-y-4">
+                <div th:each="r : ${recentRentals}" class="flex items-center justify-between pb-3 border-b border-gray-100 last:border-none">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-gray-100 rounded-lg"><i data-lucide="bike" class="w-5 h-5 text-gray-600"></i></div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800" th:text="${r.bikeId}">Mountain Bike #001</p>
+                            <p class="text-xs text-gray-400">Nov 11, 2026</p>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">Ongoing</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

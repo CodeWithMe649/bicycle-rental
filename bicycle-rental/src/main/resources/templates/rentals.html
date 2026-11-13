@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Rental Transactions - Bicycle Rental System</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
+        .header { background: #343a40; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header a { color: #ffc107; text-decoration: none; font-weight: bold; }
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #007bff; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>📋 Rental History</h2>
+        <a th:href="@{/}">Back to Dashboard</a>
+    </div>
+
+    <div class="container">
+        <h3>All Rental Transactions</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rental ID</th>
+                    <th>Bike ID</th>
+                    <th>User ID</th>
+                    <th>Rental Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="rental : ${rentals}">
+                    <td th:text="${rental.id}">RNT001</td>
+                    <td th:text="${rental.bikeId}">BIK101</td>
+                    <td th:text="${rental.userId}">USR001</td>
+                    <td th:text="${rental.rentalDate}">2026-11-11</td>
+                    <td th:text="${rental.status}">COMPLETED</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

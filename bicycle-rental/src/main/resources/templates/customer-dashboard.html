@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Dashboard - BikeRent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8 text-gray-800">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+
+        <!-- Top Navbar -->
+        <header class="bg-white rounded-2xl p-4 px-6 shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-500/20">
+                    <i data-lucide="bike" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-gray-900 text-lg leading-none">BikeRent</h1>
+                    <p class="text-xs text-gray-400 mt-0.5">Client Portal</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                <a href="#browse" class="px-3.5 py-2 rounded-lg bg-white text-blue-600 shadow-sm">Browse Bikes</a>
+                <a href="#active-rentals" class="px-3.5 py-2 rounded-lg text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
+                    Active Rentals
+                    <span th:if="${activeCount != null and activeCount > 0}" th:text="${activeCount}"
+                          class="bg-amber-500 text-white text-[10px] px-1.5 py-0.2 rounded-full">1</span>
+                </a>
+                <a href="#history" class="px-3.5 py-2 rounded-lg text-gray-600 hover:text-gray-900">My History</a>
+            </nav>
+
+            <!-- Profile Button & Logout -->
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="openProfileModal()"
+                        class="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition cursor-pointer"
+                        title="Edit Profile">
+                    <div class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs uppercase"
+                         th:text="${#strings.substring(username, 0, 1)}">J</div>
+                    <span class="text-sm font-semibold text-gray-800 capitalize hidden sm:inline" th:text="${username}">John</span>
+                    <i data-lucide="settings" class="w-3.5 h-3.5 text-blue-600"></i>
+                </button>
+
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" 
+                            class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 px-3.5 py-2 rounded-xl font-semibold text-xs transition border border-red-100">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <!-- Flash Toast Banner -->
+        <div th:if="${message}" class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2.5 text-sm font-medium">
+                <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i>
+                <span th:text="${message}">Success!</span>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900 text-xs font-bold">✕</button>
+        </div>
+
+        <!-- Hero Banner with Quick Action Buttons -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 class="text-3xl font-extrabold capitalize" th:text="'Welcome Back, ' + ${username} + '!'">Welcome Back!</h1>
+                    <p class="text-blue-100 mt-2 max-w-xl text-sm">Find your perfect ride, check live availability, manage active rentals, and pay seamlessly in one click.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="#browse" class="bg-white text-blue-700 hover:bg-blue-50 px-5 py-3 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-2">
+                        <i data-lucide="compass" class="w-4 h-4"></i> Explore Fleet
+                    </a>
+                    <button type="button" onclick="openIssueModal('General')"
+                            class="bg-white/15 hover:bg-white/25 text-white border border-white/25 px-4 py-3 rounded-xl font-semibold text-xs transition flex items-center gap-2">
+                        <i data-lucide="life-buoy" class="w-4 h-4"></i> Support / Report
+                    </button>
+                </div>
+            </div>
+            <div class="absolute right-6 -bottom-6 opacity-15 pointer-events-none">
+                <i data-lucide="bike" class="w-64 h-64"></i>
+            </div>
+        </div>
+
+        <!-- QUICK STATS STRIP -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 px-5 border border-gray-100 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 font-medium">Active Rides</p>
+                    <p class="text-2xl font-extrabold text-amber-600 mt-0.5" th:text="${activeCount != null ? activeCount : 0}">0</p>
+                </div>
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i data-lucide="timer" class="w-5 h-5"></i></div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 px-5 border border-gray-100 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 font-medium">Completed Rides</p>
+                    <p class="text-2xl font-extrabold text-emerald-600 mt-0.5" th:text="${completedCount != null ? completedCount : 0}">0</p>
+                </div>
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 px-5 border border-gray-100 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 font-medium">Available Fleet</p>
+                    <p class="text-2xl font-extrabold text-blue-600 mt-0.5" th:text="${#lists.size(availableBikes)}">105</p>
+                </div>
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="bike" class="w-5 h-5"></i></div>
+            </div>
+        </div>
+
+        <!-- ACTIVE RENTALS SECTION (Safe Date Rendering + Pay & Return, Extend +1hr, Report Issue) -->
+        <div id="active-rentals" th:if="${activeRentals != null and !#lists.isEmpty(activeRentals)}" class="space-y-3">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i> My Active Rentals
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:each="r : ${activeRentals}" class="bg-white border-2 border-amber-200 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[11px] rounded-full uppercase">In Use</span>
+                                <span class="text-xs text-gray-400 font-mono" th:text="${r.id}">RNT20260001</span>
+                            </div>
+                            <h3 class="font-bold text-gray-900 text-base" th:text="'Bike ID: ' + ${r.bikeId}">Bike ID: BIK20260001</h3>
+                            <p class="text-xs text-gray-500" th:text="'Status: ' + ${r.status}">Status: ACTIVE</p>
+                        </div>
+                    </div>
+
+                    <!-- 3 Functional Buttons for Active Rental -->
+                    <div class="pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
+                        <!-- 1. Pay & Return -->
+                        <form th:action="@{/pay-return}" method="post">
+                            <input type="hidden" name="rentalId" th:value="${r.id}" />
+                            <button type="submit" 
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-semibold text-xs transition shadow-sm flex items-center gap-1.5">
+                                <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Pay & Return
+                            </button>
+                        </form>
+
+                        <!-- 2. Extend +1 Hour -->
+                        <form th:action="@{/extend-rental}" method="post">
+                            <input type="hidden" name="rentalId" th:value="${r.id}" />
+                            <button type="submit" 
+                                    class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3.5 py-2 rounded-xl font-semibold text-xs transition flex items-center gap-1.5">
+                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Extend +1 Hr
+                            </button>
+                        </form>
+
+                        <!-- 3. Report Issue -->
+                        <button type="button" th:data-bike="${r.bikeId}" onclick="openIssueModal(this.getAttribute('data-bike'))"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl font-semibold text-xs transition flex items-center gap-1.5">
+                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600"></i> Report Issue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AVAILABLE BICYCLES CATALOG -->
+        <div id="browse" class="space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-blue-600"></i> Available Bicycles
+                </h2>
+
+                <!-- Search & Category Filter Buttons -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+                        <input type="text" id="bikeSearch" onkeyup="filterBikes()" placeholder="Search model or ID..."
+                               class="bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:border-blue-500 w-44">
+                    </div>
+
+                    <button type="button" onclick="setCategory('ALL')" class="cat-btn bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold transition">All</button>
+                    <button type="button" onclick="setCategory('Mountain')" class="cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition">Mountain</button>
+                    <button type="button" onclick="setCategory('Hybrid')" class="cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition">Hybrid</button>
+                    <button type="button" onclick="setCategory('City')" class="cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition">City</button>
+                </div>
+            </div>
+
+            <!-- Bike Grid -->
+            <div id="bikeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div th:each="b : ${availableBikes}" 
+                     th:data-model="${(b.model != null ? b.model : '') + ' ' + b.id}" 
+                     th:data-category="${b.category}"
+                     class="bike-card bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition p-6 flex flex-col justify-between">
+                    
+                    <div>
+                        <div class="bg-blue-50/70 rounded-xl p-6 mb-4 flex items-center justify-center relative">
+                            <i data-lucide="bike" class="w-16 h-16 text-blue-600"></i>
+                            <span class="absolute top-3 left-3 text-[10px] font-mono text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100" th:text="${b.id}">BIK001</span>
+                        </div>
+
+                        <div class="flex justify-between items-start mb-1">
+                            <h3 class="font-bold text-gray-900 text-lg" th:text="${b.model != null ? b.model : 'Bike ' + b.id}">Bike BIK20260104</h3>
+                            <span th:classappend="${b.status == 'Available'} ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
+                                  class="px-2.5 py-1 font-semibold text-xs rounded-full" 
+                                  th:text="${b.status}">Available</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-4" th:text="'Category: ' + ${b.category}">Category: Mountain</p>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div>
+                            <span class="text-xs text-gray-400 block">Rate</span>
+                            <span class="text-lg font-extrabold text-blue-600" th:text="'₱' + (${b.ratePerHour > 0} ? ${b.ratePerHour} : '15.0') + '/hr'">₱15.0/hr</span>
+                        </div>
+
+                        <!-- Card Action Buttons: Details + Rent Now -->
+                        <div class="flex items-center gap-2">
+                            <button type="button"
+                                    th:data-id="${b.id}"
+                                    th:data-model="${b.model != null ? b.model : 'Bike ' + b.id}"
+                                    th:data-cat="${b.category}"
+                                    th:data-rate="${b.ratePerHour > 0 ? b.ratePerHour : 15.0}"
+                                    onclick="openDetailsModal(this)"
+                                    class="bg-slate-100 hover:bg-slate-200 text-gray-700 px-3 py-2.5 rounded-xl font-semibold text-xs transition"
+                                    title="View Bike Specs">
+                                Details
+                            </button>
+
+                            <button th:if="${b.status == 'Available'}" type="button"
+                                    th:data-id="${b.id}"
+                                    th:data-model="${b.model != null ? b.model : 'Bike ' + b.id}"
+                                    th:data-rate="${b.ratePerHour > 0 ? b.ratePerHour : 15.0}"
+                                    onclick="openRentModal(this)"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-semibold text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-1.5">
+                                <i data-lucide="key" class="w-4 h-4"></i> Rent Now
+                            </button>
+
+                            <button th:if="${b.status != 'Available'}" disabled
+                                    class="bg-gray-100 text-gray-400 cursor-not-allowed px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1">
+                                <i data-lucide="lock" class="w-3.5 h-3.5"></i> Rented
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RENTAL HISTORY & RECEIPTS -->
+        <div id="history" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="receipt" class="w-5 h-5 text-blue-600"></i> My Rental History & Receipts
+            </h2>
+
+            <div th:if="${pastRentals == null or #lists.isEmpty(pastRentals)}" class="text-center py-6 text-xs text-gray-400">
+                No completed rentals yet. Rent a bike above to get started!
+            </div>
+
+            <div th:if="${pastRentals != null and !#lists.isEmpty(pastRentals)}" class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="border-b border-gray-100 text-gray-400 uppercase">
+                            <th class="py-3 px-2">Rental ID</th>
+                            <th class="py-3 px-2">Bike ID</th>
+                            <th class="py-3 px-2">Year</th>
+                            <th class="py-3 px-2">Status</th>
+                            <th class="py-3 px-2 text-right">Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        <tr th:each="h : ${pastRentals}" class="hover:bg-slate-50">
+                            <td class="py-3 px-2 font-mono font-semibold text-gray-700" th:text="${h.id}">RNT001</td>
+                            <td class="py-3 px-2 text-gray-600" th:text="${h.bikeId}">BIK001</td>
+                            <td class="py-3 px-2 text-gray-500">2026</td>
+                            <td class="py-3 px-2">
+                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full" th:text="${h.status}">PAID</span>
+                            </td>
+                            <td class="py-3 px-2 text-right">
+                                <a th:href="@{'/receipt/' + ${h.id}}" class="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Receipt
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 1: RENT & CHECKOUT MODAL ================= -->
+    <div id="rentModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900">Confirm Bike Rental</h3>
+                <button type="button" onclick="closeModal('rentModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+            </div>
+
+            <form th:action="@{/rent-bike}" method="post" class="space-y-4">
+                <input type="hidden" name="bikeId" id="modalBikeId" />
+
+                <div class="bg-blue-50 p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-blue-600 font-semibold" id="modalBikeCode">BIK20260104</p>
+                        <p class="font-bold text-gray-900" id="modalBikeName">Bike Name</p>
+                    </div>
+                    <p class="text-lg font-extrabold text-blue-600">₱<span id="modalBikeRate">15.0</span>/hr</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Select Duration (Hours)</label>
+                    <select name="hours" id="modalHours" onchange="updateTotal()"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-500">
+                        <option value="1">1 Hour</option>
+                        <option value="2">2 Hours</option>
+                        <option value="4">4 Hours (Half Day)</option>
+                        <option value="8">8 Hours (Full Day)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Payment Method</label>
+                    <select name="paymentMethod"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-500">
+                        <option value="GCash">GCash E-Wallet</option>
+                        <option value="Maya">Maya</option>
+                        <option value="Cash at Station">Cash at Station</option>
+                        <option value="Credit/Debit Card">Credit / Debit Card</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-3.5 rounded-xl flex items-center justify-between text-sm">
+                    <span class="text-gray-500 font-medium">Estimated Total:</span>
+                    <span class="text-xl font-extrabold text-gray-900">₱<span id="modalTotal">15.00</span></span>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('rentModal')" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-xs">Cancel</button>
+                    <button type="submit" class="w-2/3 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/25">Confirm & Start Ride</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 2: BIKE DETAILS MODAL ================= -->
+    <div id="detailsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900" id="detTitle">Bike Specifications</h3>
+                <button type="button" onclick="closeModal('detailsModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+            </div>
+            <div class="space-y-2 text-xs text-gray-600">
+                <p><strong>Bike ID:</strong> <span id="detId" class="font-mono"></span></p>
+                <p><strong>Category:</strong> <span id="detCat"></span></p>
+                <p><strong>Hourly Rate:</strong> ₱<span id="detRate"></span>/hr</p>
+                <p><strong>Frame & Gears:</strong> Lightweight Alloy Frame • 21-Speed Shimano • Disc Brakes</p>
+                <p><strong>Pickup Hub:</strong> Davao Main Bike Station (Free Helmet Included)</p>
+            </div>
+            <button type="button" onclick="closeModal('detailsModal')" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-semibold text-xs">Close</button>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 3: REPORT ISSUE MODAL ================= -->
+    <div id="issueModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900">Report Bike / Support Issue</h3>
+                <button type="button" onclick="closeModal('issueModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+            </div>
+            <form th:action="@{/report-issue}" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Bike ID</label>
+                    <input type="text" name="bikeId" id="issueBikeId" readonly class="w-full bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Describe Issue</label>
+                    <textarea name="issueNote" rows="3" required placeholder="e.g. Flat tire, brake adjustment needed, lock stuck..."
+                              class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs outline-none focus:border-blue-500"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-xs">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 4: EDIT PROFILE MODAL ================= -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900">Account Settings</h3>
+                <button type="button" onclick="closeModal('profileModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+            </div>
+            <form th:action="@{/update-profile}" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Display Name</label>
+                    <input type="text" name="newName" th:value="${username}" required
+                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">New Password (leave blank to keep current)</label>
+                    <input type="password" name="newPassword" placeholder="••••••••"
+                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let selectedCategory = 'ALL';
+        let currentHourlyRate = 15.0;
+
+        function setCategory(cat) {
+            selectedCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.textContent.trim().toUpperCase() === cat.toUpperCase()) {
+                    btn.className = 'cat-btn bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold transition';
+                } else {
+                    btn.className = 'cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition';
+                }
+            });
+            filterBikes();
+        }
+
+        function filterBikes() {
+            const query = document.getElementById('bikeSearch').value.toLowerCase();
+            document.querySelectorAll('.bike-card').forEach(card => {
+                const model = (card.getAttribute('data-model') || '').toLowerCase();
+                const category = (card.getAttribute('data-category') || '').toLowerCase();
+                const matchesSearch = model.includes(query);
+                const matchesCat = (selectedCategory === 'ALL') || (category === selectedCategory.toLowerCase());
+                card.style.display = (matchesSearch && matchesCat) ? 'flex' : 'none';
+            });
+        }
+
+        function openRentModal(btn) {
+            const id = btn.getAttribute('data-id');
+            const model = btn.getAttribute('data-model');
+            currentHourlyRate = parseFloat(btn.getAttribute('data-rate')) || 15.0;
+
+            document.getElementById('modalBikeId').value = id;
+            document.getElementById('modalBikeCode').textContent = id;
+            document.getElementById('modalBikeName').textContent = model;
+            document.getElementById('modalBikeRate').textContent = currentHourlyRate.toFixed(1);
+            document.getElementById('modalHours').value = "1";
+            updateTotal();
+            document.getElementById('rentModal').classList.remove('hidden');
+        }
+
+        function updateTotal() {
+            const hrs = parseInt(document.getElementById('modalHours').value) || 1;
+            document.getElementById('modalTotal').textContent = (hrs * currentHourlyRate).toFixed(2);
+        }
+
+        function openDetailsModal(btn) {
+            document.getElementById('detId').textContent = btn.getAttribute('data-id');
+            document.getElementById('detTitle').textContent = btn.getAttribute('data-model');
+            document.getElementById('detCat').textContent = btn.getAttribute('data-cat');
+            document.getElementById('detRate').textContent = btn.getAttribute('data-rate');
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        function openIssueModal(bikeId) {
+            document.getElementById('issueBikeId').value = bikeId;
+            document.getElementById('issueModal').classList.remove('hidden');
+        }
+
+        function openProfileModal() {
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
