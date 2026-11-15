@@ -1,46 +1,72 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'bicycles')}">
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'transactions')}">
 <body>
 <section>
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900">Manage Bicycles</h2>
-            <p class="text-gray-500 text-sm">Add, update, or remove bicycles.</p>
+    <div class="max-w-xl mx-auto">
+        <!-- Back & Print Buttons -->
+        <div class="flex justify-between items-center mb-6">
+            <a th:href="@{/}" class="text-sm font-semibold text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                ← Back to Dashboard
+            </a>
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
+                Print Receipt
+            </button>
         </div>
-        <button class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-blue-700 transition">
-            <i data-lucide="plus" class="w-4 h-4"></i> Add Bike
-        </button>
-    </div>
 
-    <!-- Table Card Container -->
-    <div class="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-50 text-gray-400 text-xs font-semibold uppercase tracking-wider">
-                    <th class="py-4 px-6">ID</th>
-                    <th class="py-4 px-6">Name</th>
-                    <th class="py-4 px-6">Type</th>
-                    <th class="py-4 px-6">Price/Hour</th>
-                    <th class="py-4 px-6">Status</th>
-                    <th class="py-4 px-6 text-right">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 text-sm">
-                <tr th:each="b : ${bikes}" class="hover:bg-gray-50/50">
-                    <td class="py-4 px-6 font-semibold text-gray-700" th:text="${b.id}">001</td>
-                    <td class="py-4 px-6 font-bold text-gray-900" th:text="${b.model}">Mountain Bike</td>
-                    <td class="py-4 px-6 text-gray-500" th:text="${b.category}">Mountain</td>
-                    <td class="py-4 px-6 font-semibold text-gray-800" th:text="'₱' + ${b.ratePerHour}">₱50</td>
-                    <td class="py-4 px-6">
-                        <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700" th:text="${b.status}">Available</span>
-                    </td>
-                    <td class="py-4 px-6 text-right space-x-2">
-                        <button class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                        <button class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <!-- Receipt Card -->
+        <div th:if="${rental != null}" class="bg-white rounded-3xl border border-gray-100 shadow-lg p-8 space-y-6">
+            <div class="text-center border-b border-dashed border-gray-200 pb-6">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600 text-white font-bold text-xl mb-3">
+                    🚲
+                </div>
+                <h2 class="text-2xl font-extrabold text-gray-900">BikeRent Official Receipt</h2>
+                <p class="text-xs text-gray-400 mt-1">Davao Main Bike Station • Official Transaction Record</p>
+            </div>
+
+            <!-- Joined Details (Rental + User + Bike) -->
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Receipt / Rental ID</span>
+                    <span class="font-mono font-bold text-gray-900" th:text="${rental.id}">RNT20260001</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Date & Time</span>
+                    <span class="font-semibold text-gray-800"
+                          th:text="${rental.startTime != null ? #temporals.format(rental.startTime, 'MMM dd, yyyy HH:mm') : 'Nov 14, 2026'}">Nov 14, 2026</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Customer</span>
+                    <span class="font-semibold text-gray-800"
+                          th:text="${customer != null ? customer.name + ' (' + rental.userId + ')' : rental.userId}">Chang (USR20260002)</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Bicycle Rented</span>
+                    <span class="font-semibold text-gray-800"
+                          th:text="${bike != null ? bike.model + ' (' + rental.bikeId + ')' : rental.bikeId}">Trek Marlin 5</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Category</span>
+                    <span class="font-semibold text-gray-800" th:text="${bike != null ? bike.category : 'Standard'}">Mountain</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Status</span>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700"
+                          th:text="${rental.status}">PAID & COMPLETED</span>
+                </div>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="border-t border-dashed border-gray-200 pt-6 flex justify-between items-center">
+                <span class="text-base font-bold text-gray-700">Total Amount Paid</span>
+                <span class="text-2xl font-extrabold text-blue-600"
+                      th:text="'₱' + ${bike != null ? #numbers.formatDecimal(bike.ratePerHour, 1, 2) : '150.00'}">₱180.00</span>
+            </div>
+        </div>
+
+        <!-- Fallback if Receipt ID not found -->
+        <div th:if="${rental == null}" class="bg-white rounded-3xl p-8 text-center text-gray-500 shadow-sm">
+            Receipt record not found.
+        </div>
     </div>
 </section>
 </body>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'transactions')}">
+<body>
+<section>
+    <div th:if="${message}" class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium" th:text="${message}"></div>
+
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">Rental Transactions</h2>
+            <p class="text-gray-500">Track active rentals, settle returns, and view receipts.</p>
+        </div>
+        <a th:href="@{/rentals}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow transition">
+            <i data-lucide="plus" class="w-4 h-4"></i> New Rental
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-400 font-semibold">
+                    <th class="py-4 px-6">Rental ID</th>
+                    <th class="py-4 px-6">Bike ID</th>
+                    <th class="py-4 px-6">Customer ID</th>
+                    <th class="py-4 px-6">Start Time</th>
+                    <th class="py-4 px-6">Status</th>
+                    <th class="py-4 px-6 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-sm">
+                <tr th:each="r : ${rentals}" class="hover:bg-gray-50 transition">
+                    <td class="py-4 px-6 font-semibold text-gray-800" th:text="${r.id}">RNT001</td>
+                    <td class="py-4 px-6 text-gray-700" th:text="${r.bikeId}">BIK101</td>
+                    <td class="py-4 px-6 text-gray-500" th:text="${r.userId}">USR001</td>
+                    <td class="py-4 px-6 text-gray-500" th:text="${r.startTime != null ? #temporals.format(r.startTime, 'MMM dd, yyyy HH:mm') : 'N/A'}">Nov 14, 2026</td>
+                    <td class="py-4 px-6">
+                        <span th:text="${r.status}"
+                              th:classappend="${r.status == 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}"
+                              class="px-3 py-1 rounded-full text-xs font-semibold">ACTIVE</span>
+                    </td>
+                    <td class="py-4 px-6 text-right space-x-2">
+                        <!-- Return Bike Button (Only shows for ACTIVE rentals) -->
+                        <form th:if="${r.status == 'ACTIVE'}" th:action="@{/pay-return}" method="post" class="inline">
+                            <input type="hidden" name="rentalId" th:value="${r.id}" />
+                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
+                                Return Bike
+                            </button>
+                        </form>
+                        <!-- View Receipt Link -->
+                        <a th:href="@{/receipt/{id}(id=${r.id})}" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg transition inline-block">
+                            Receipt
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+</body>
+</html>

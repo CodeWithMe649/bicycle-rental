@@ -2,46 +2,189 @@
 <html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'bicycles')}">
 <body>
 <section>
-    <div class="flex justify-between items-center mb-6">
+    <!-- Flash Message -->
+    <div th:if="${message}" class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium" th:text="${message}"></div>
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
             <h2 class="text-2xl font-bold text-gray-900">Manage Bicycles</h2>
-            <p class="text-gray-500 text-sm">Add, update, or remove bicycles.</p>
+            <p class="text-gray-500 text-sm">Add, update, filter, or remove bicycles from your fleet.</p>
         </div>
-        <button class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-blue-700 transition">
+        <button onclick="openAddModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-blue-700 transition shadow-sm">
             <i data-lucide="plus" class="w-4 h-4"></i> Add Bike
         </button>
     </div>
 
+    <!-- Search & Filter Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <input type="text" id="bikeSearch" onkeyup="filterBikes()" placeholder="Search by ID, model, or category..."
+               class="w-full sm:w-80 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+        <div class="flex gap-2 w-full sm:w-auto overflow-x-auto">
+            <button type="button" onclick="setStatusFilter('ALL')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white">All</button>
+            <button type="button" onclick="setStatusFilter('Available')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200">Available</button>
+            <button type="button" onclick="setStatusFilter('Rented')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200">Rented</button>
+            <button type="button" onclick="setStatusFilter('Maintenance')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200">Maintenance</button>
+        </div>
+    </div>
+
     <!-- Table Card Container -->
     <div class="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-        <table class="w-full text-left border-collapse">
+        <table class="w-full text-left border-collapse" id="bikesTable">
             <thead>
                 <tr class="bg-gray-50 text-gray-400 text-xs font-semibold uppercase tracking-wider">
                     <th class="py-4 px-6">ID</th>
-                    <th class="py-4 px-6">Name</th>
-                    <th class="py-4 px-6">Type</th>
+                    <th class="py-4 px-6">Model Name</th>
+                    <th class="py-4 px-6">Category</th>
                     <th class="py-4 px-6">Price/Hour</th>
                     <th class="py-4 px-6">Status</th>
                     <th class="py-4 px-6 text-right">Action</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm">
-                <tr th:each="b : ${bikes}" class="hover:bg-gray-50/50">
-                    <td class="py-4 px-6 font-semibold text-gray-700" th:text="${b.id}">001</td>
-                    <td class="py-4 px-6 font-bold text-gray-900" th:text="${b.model}">Mountain Bike</td>
+                <tr th:each="b : ${bikes}" class="bike-row hover:bg-gray-50/50" th:data-status="${b.status}">
+                    <td class="py-4 px-6 font-semibold text-gray-700" th:text="${b.id}">BIK001</td>
+                    <td class="py-4 px-6 font-bold text-gray-900" th:text="${b.model != null ? b.model : 'Standard Bike'}">Mountain Bike</td>
                     <td class="py-4 px-6 text-gray-500" th:text="${b.category}">Mountain</td>
-                    <td class="py-4 px-6 font-semibold text-gray-800" th:text="'₱' + ${b.ratePerHour}">₱50</td>
+                    <td class="py-4 px-6 font-semibold text-gray-800" th:text="'₱' + ${#numbers.formatDecimal(b.ratePerHour, 1, 2)}">₱150.00</td>
                     <td class="py-4 px-6">
-                        <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700" th:text="${b.status}">Available</span>
+                        <span th:text="${b.status}"
+                              th:classappend="${b.status == 'Available' ? 'bg-emerald-100 text-emerald-700' : (b.status == 'Maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700')}"
+                              class="px-3 py-1 text-xs font-bold rounded-full">Available</span>
                     </td>
                     <td class="py-4 px-6 text-right space-x-2">
-                        <button class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                        <button class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <!-- Edit Button -->
+                        <button type="button"
+                                th:data-id="${b.id}"
+                                th:data-model="${b.model}"
+                                th:data-category="${b.category}"
+                                th:data-rate="${b.ratePerHour}"
+                                th:data-status="${b.status}"
+                                onclick="openEditModal(this)"
+                                class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </button>
+
+                        <!-- Delete Button -->
+                        <form th:action="@{/bicycles/delete/{id}(id=${b.id})}" method="post" class="inline">
+                            <button type="submit" onclick="return confirm('Delete this bicycle permanently?')"
+                                    class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </form>
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
+
+    <!-- Add / Edit Bike Modal -->
+    <div id="bikeModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-900">Add New Bicycle</h3>
+                <button type="button" onclick="closeBikeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+
+            <form th:action="@{/bicycles/save}" method="post" class="space-y-4">
+                <input type="hidden" id="bikeId" name="id">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Bike Model Name</label>
+                    <input type="text" id="bikeModel" name="model" required placeholder="e.g. Trek Marlin 5"
+                           class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Category / Type</label>
+                    <select id="bikeCategory" name="category" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="Mountain">Mountain</option>
+                        <option value="City">City</option>
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="Road">Road</option>
+                        <option value="Electric">Electric</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Price Per Hour (₱)</label>
+                    <input type="number" step="0.01" id="bikeRate" name="ratePerHour" required placeholder="150.00"
+                           class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Status</label>
+                    <select id="bikeStatus" name="status" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="Available">Available</option>
+                        <option value="Rented">Rented</option>
+                        <option value="Maintenance">Maintenance</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeBikeModal()" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow">Save Bicycle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal & Filter Scripts -->
+    <script>
+        let currentStatus = 'ALL';
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = 'Add New Bicycle';
+            document.getElementById('bikeId').value = '';
+            document.getElementById('bikeModel').value = '';
+            document.getElementById('bikeCategory').value = 'Mountain';
+            document.getElementById('bikeRate').value = '150';
+            document.getElementById('bikeStatus').value = 'Available';
+            document.getElementById('bikeModal').classList.remove('hidden');
+            document.getElementById('bikeModal').classList.add('flex');
+        }
+
+        function openEditModal(btn) {
+            document.getElementById('modalTitle').innerText = 'Edit Bicycle (' + btn.dataset.id + ')';
+            document.getElementById('bikeId').value = btn.dataset.id;
+            document.getElementById('bikeModel').value = btn.dataset.model || '';
+            document.getElementById('bikeCategory').value = btn.dataset.category || 'Mountain';
+            document.getElementById('bikeRate').value = btn.dataset.rate || '150';
+            document.getElementById('bikeStatus').value = btn.dataset.status || 'Available';
+            document.getElementById('bikeModal').classList.remove('hidden');
+            document.getElementById('bikeModal').classList.add('flex');
+        }
+
+        function closeBikeModal() {
+            document.getElementById('bikeModal').classList.add('hidden');
+            document.getElementById('bikeModal').classList.remove('flex');
+        }
+
+        function setStatusFilter(status) {
+            currentStatus = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-gray-100', 'text-gray-600');
+                if ((status === 'ALL' && btn.innerText === 'All') || btn.innerText === status) {
+                    btn.classList.remove('bg-gray-100', 'text-gray-600');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                }
+            });
+            filterBikes();
+        }
+
+        function filterBikes() {
+            const query = document.getElementById('bikeSearch').value.toLowerCase();
+            document.querySelectorAll('.bike-row').forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const status = row.dataset.status;
+                const matchesSearch = text.includes(query);
+                const matchesStatus = (currentStatus === 'ALL' || status === currentStatus);
+                row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+            });
+        }
+    </script>
 </section>
 </body>
 </html>

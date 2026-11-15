@@ -26,51 +26,61 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Seed 105 Bikes
+        // 1. Seed 105 Bikes (Meets 100+ minimum requirement)
         if (bikeRepository.count() < 100) {
+            bikeRepository.deleteAll();
+            String[] models = {"Trek Marlin 5", "Giant Escape 3", "Specialized Sirrus", "Cannondale Trail 8", "Merida Crossway"};
+            String[] categories = {"Mountain", "City", "Hybrid", "Mountain", "Hybrid"};
+            double[] rates = {180.0, 120.0, 150.0, 200.0, 160.0};
+
             List<Bike> bikes = new ArrayList<>();
             for (int i = 1; i <= 105; i++) {
+                int idx = i % models.length;
+                String status = (i <= 5) ? "Rented" : (i == 6 ? "Maintenance" : "Available");
                 bikes.add(new Bike(
                     String.format("BIK2026%04d", i),
-                    "Model-" + i,
-                    i % 2 == 0 ? "Mountain" : "City",
-                    10.0 + (i % 5),
-                    "Available"
+                    models[idx] + " #" + i,
+                    categories[idx],
+                    rates[idx],
+                    status
                 ));
             }
             bikeRepository.saveAll(bikes);
         }
 
-        // 2. Clear old users and seed new users with christian123 password
-        userRepository.deleteAll();
-        
-        List<User> users = new ArrayList<>();
-        String customPassword = passwordEncoder.encode("christian123");
+        // 2. Seed 105 Users (Meets 100+ minimum requirement)
+        if (userRepository.count() < 100) {
+            userRepository.deleteAll();
+            List<User> users = new ArrayList<>();
+            String customPassword = passwordEncoder.encode("christian123");
 
-        for (int i = 1; i <= 105; i++) {
-            String name = (i == 1) ? "Christian" : "User " + i;
-            String email = (i == 1) ? "christian@example.com" : "user" + i + "@example.com";
+            for (int i = 1; i <= 105; i++) {
+                String name = (i == 1) ? "Christian" : "Customer " + i;
+                String email = (i == 1) ? "christian@example.com" : "user" + i + "@example.com";
 
-            users.add(new User(
-                String.format("USR2026%04d", i),
-                name,
-                email,
-                customPassword,
-                i == 1 ? "ROLE_ADMIN" : "ROLE_CUSTOMER"
-            ));
+                users.add(new User(
+                    String.format("USR2026%04d", i),
+                    name,
+                    email,
+                    customPassword,
+                    i == 1 ? "ROLE_ADMIN" : "ROLE_CUSTOMER"
+                ));
+            }
+            userRepository.saveAll(users);
         }
-        userRepository.saveAll(users);
 
-        // 3. Seed 210 Rental Transactions
+        // 3. Seed 210 Rentals (Meets 200+ minimum transaction requirement)
         if (rentalRepository.count() < 200) {
+            rentalRepository.deleteAll();
             List<Rental> rentals = new ArrayList<>();
             for (int i = 1; i <= 210; i++) {
+                String status = (i <= 5) ? "ACTIVE" : "COMPLETED";
                 rentals.add(new Rental(
                     String.format("RNT2026%04d", i),
                     String.format("BIK2026%04d", (i % 100) + 1),
-                    String.format("USR2026%04d", (i % 100) + 1),
-                    LocalDateTime.now().minusDays(i),
-                    "COMPLETED"
+                    String.format("USR2026%04d", (i % 100) + 2),
+                    LocalDateTime.now().minusHours(i * 2),
+                    status
                 ));
             }
             rentalRepository.saveAll(rentals);

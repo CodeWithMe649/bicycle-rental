@@ -1,47 +1,128 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Rental Transactions - Bicycle Rental System</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
-        .header { background: #343a40; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        .header a { color: #ffc107; text-decoration: none; font-weight: bold; }
-        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #007bff; color: white; }
-        tr:hover { background-color: #f1f1f1; }
-    </style>
-</head>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'transactions')}">
 <body>
-    <div class="header">
-        <h2>📋 Rental History</h2>
-        <a th:href="@{/}">Back to Dashboard</a>
+<section>
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">Create New Rental</h2>
+            <p class="text-gray-500 text-sm">Assign an available bicycle to a registered customer.</p>
+        </div>
+        <a th:href="@{/transactions}" class="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition">
+            ← Back to Transactions
+        </a>
     </div>
 
-    <div class="container">
-        <h3>All Rental Transactions</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Rental ID</th>
-                    <th>Bike ID</th>
-                    <th>User ID</th>
-                    <th>Rental Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="rental : ${rentals}">
-                    <td th:text="${rental.id}">RNT001</td>
-                    <td th:text="${rental.bikeId}">BIK101</td>
-                    <td th:text="${rental.userId}">USR001</td>
-                    <td th:text="${rental.rentalDate}">2026-11-11</td>
-                    <td th:text="${rental.status}">COMPLETED</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Rental Checkout Form -->
+        <div class="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <form th:action="@{/rent-bike}" method="post" class="space-y-6">
+                
+                <!-- 1. Select Customer -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">1. Select Customer</label>
+                    <select name="userId" required class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="" disabled selected>-- Choose a registered customer --</option>
+                        <option th:each="u : ${users}" 
+                                th:if="${u.role != 'ROLE_ADMIN'}"
+                                th:value="${u.id}" 
+                                th:text="${u.name + ' (' + u.email + ')'}">
+                            Customer Name
+                        </option>
+                    </select>
+                </div>
+
+                <!-- 2. Select Available Bicycle -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">2. Select Available Bicycle</label>
+                    <select id="bikeSelect" name="bikeId" required onchange="updateSummary()"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="" data-rate="0" disabled selected>-- Choose an available bike --</option>
+                        <option th:each="b : ${bikes}" 
+                                th:if="${b.status == 'Available'}"
+                                th:value="${b.id}" 
+                                th:data-rate="${b.ratePerHour}"
+                                th:data-name="${b.model}"
+                                th:text="${b.id + ' - ' + b.model + ' (' + b.category + ') — ₱' + #numbers.formatDecimal(b.ratePerHour, 1, 2) + '/hr'}">
+                            BIK001 - Trek Marlin 5
+                        </option>
+                    </select>
+                </div>
+
+                <!-- 3. Duration & Payment Method -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">3. Duration (Hours)</label>
+                        <input type="number" id="hoursInput" name="hours" value="1" min="1" max="24" required oninput="updateSummary()"
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">4. Payment Method</label>
+                        <select name="paymentMethod" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="Cash">Cash (Walk-in)</option>
+                            <option value="GCash">GCash</option>
+                            <option value="Maya">Maya</option>
+                            <option value="Credit/Debit Card">Credit / Debit Card</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i> Confirm & Start Rental
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Live Order Summary Card -->
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-8 rounded-3xl shadow-lg flex flex-col justify-between">
+            <div>
+                <h3 class="text-lg font-bold mb-1">Rental Summary</h3>
+                <p class="text-slate-400 text-xs mb-6">Estimated charges based on hourly rate</p>
+
+                <div class="space-y-4 text-sm border-t border-slate-700 pt-4">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Selected Bike:</span>
+                        <span id="summaryBike" class="font-semibold text-right">None selected</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Hourly Rate:</span>
+                        <span id="summaryRate" class="font-semibold">₱0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Duration:</span>
+                        <span id="summaryHours" class="font-semibold">1 hr(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-700 pt-6 mt-8">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-300 text-sm font-medium">Estimated Total</span>
+                    <span id="summaryTotal" class="text-3xl font-extrabold text-emerald-400">₱0.00</span>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Live Calculation Script -->
+    <script>
+        function updateSummary() {
+            const select = document.getElementById('bikeSelect');
+            const option = select.options[select.selectedIndex];
+            const rate = parseFloat(option.dataset.rate || 0);
+            const name = option.dataset.name || 'None selected';
+            const hours = parseInt(document.getElementById('hoursInput').value || 1);
+
+            document.getElementById('summaryBike').innerText = name;
+            document.getElementById('summaryRate').innerText = '₱' + rate.toFixed(2);
+            document.getElementById('summaryHours').innerText = hours + ' hr(s)';
+            document.getElementById('summaryTotal').innerText = '₱' + (rate * hours).toFixed(2);
+        }
+    </script>
+</section>
 </body>
 </html>

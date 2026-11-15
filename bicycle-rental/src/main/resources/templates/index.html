@@ -1,77 +1,109 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <meta charset="UTF-8">
-    <title>Bicycle Rental Management System</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
-        .header { background: #343a40; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        .header a { color: #ffc107; text-decoration: none; font-weight: bold; margin-left: 15px; }
-        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
-        .bike-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
-        .badge-available { background-color: #d4edda; color: #155724; }
-        .badge-rented { background-color: #f8d7da; color: #721c24; }
-        .btn-rent { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; }
-        .btn-return { background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; }
-        .btn-logout { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-    </style>
-</head>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'dashboard')}">
 <body>
-    <div class="header">
+<section>
+    <!-- Header (Dynamic User Name) -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 style="margin: 0; display: inline-block;">🚲 Bicycle Rental System</h2>
-            <!-- Visible only to ADMIN -->
-            <a sec:authorize="hasRole('ADMIN')" th:href="@{/rentals}">View Rental History</a>
+            <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+            <p class="text-gray-500">Welcome back, <span th:text="${userName != null ? userName : 'Admin'}">Christian</span>! 👋</p>
         </div>
-        <div>
-            <span th:text="${currentUser != null ? 'Logged in as: ' + currentUser : ''}" style="margin-right: 15px;"></span>
-            <form th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn-logout">Logout</button>
-            </form>
+        <div class="flex gap-3">
+            <a th:href="@{/bicycles}" class="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition">
+                <i data-lucide="plus" class="w-4 h-4"></i> Manage Bikes
+            </a>
         </div>
     </div>
 
-    <div class="container">
-        <!-- Visible only to ADMIN -->
-        <div sec:authorize="hasRole('ADMIN')" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h3>Add New Bicycle</h3>
-            <form th:action="@{/add-bike}" th:object="${newBike}" method="post" style="display: flex; gap: 10px;">
-                <input type="text" th:field="*{id}" placeholder="ID (e.g. BIK104)" required style="padding: 8px;" />
-                <input type="text" th:field="*{model}" placeholder="Model Name" required style="padding: 8px;" />
-                <input type="text" th:field="*{category}" placeholder="Category" required style="padding: 8px;" />
-                <input type="number" step="0.5" th:field="*{ratePerHour}" placeholder="Rate/hr" required style="padding: 8px;" />
-                <button type="submit" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Add Bike</button>
-            </form>
+    <!-- Stat Metric Cards (Clickable & 100% Dynamic) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Total Bikes -->
+        <a th:href="@{/bicycles}" class="bg-blue-100 border border-blue-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
+            <div class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bike"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Total Bikes</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalBikes}">0</h3>
+            </div>
+        </a>
+
+        <!-- Active Rentals -->
+        <a th:href="@{/rentals}" class="bg-emerald-100 border border-emerald-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
+            <div class="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="calendar"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Active Rentals</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${activeRentals}">0</h3>
+            </div>
+        </a>
+
+        <!-- Total Users -->
+        <a th:href="@{/users}" class="bg-orange-100 border border-orange-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
+            <div class="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center"><i data-lucide="users"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Total Users</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalUsers}">0</h3>
+            </div>
+        </a>
+
+        <!-- Today's Earnings (Dynamic from MongoDB) -->
+        <a th:href="@{/transactions}" class="bg-indigo-100 border border-indigo-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
+            <div class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bar-chart-3"></i></div>
+            <div>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Total Earnings</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="'₱' + ${#numbers.formatDecimal(totalEarnings != null ? totalEarnings : 0, 1, 'COMMA', 2, 'POINT')}">₱0.00</h3>
+            </div>
+        </a>
+    </div>
+
+    <!-- Main Banner & Recent Activity Split -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Hero Card -->
+        <div class="lg:col-span-2 bg-gradient-to-r from-blue-700 to-indigo-900 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+            <div>
+                <h2 class="text-3xl font-extrabold mb-2">Bicycle Rental<br>Management System</h2>
+                <p class="text-blue-200 text-sm">Rent a bike. Enjoy the ride!</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a th:href="@{/rentals}" class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition">
+                    New Rental <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+                <a th:href="@{/transactions}" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition">
+                    View Transactions
+                </a>
+            </div>
         </div>
 
-        <h3>Available Fleet</h3>
-        <div class="grid">
-            <div class="bike-card" th:each="bike : ${bikes}">
-                <h4 th:text="${bike.model != null ? bike.model : 'Bicycle'}" style="margin-top:0;">Model Name</h4>
-                <p><strong>ID:</strong> <span th:text="${bike.id}">BIK100</span></p>
-                <p><strong>Category:</strong> <span th:text="${bike.category}">City</span></p>
-                <p><strong>Rate:</strong> $<span th:text="${#numbers.formatDecimal(bike.ratePerHour, 1, 2)}">10.00</span>/hr</p>
-                <p>
-                    <strong>Status:</strong> 
-                    <span class="badge" 
-                          th:classappend="${bike.status == 'Available'} ? 'badge-available' : 'badge-rented'"
-                          th:text="${bike.status}">Available</span>
-                </p>
+        <!-- Recent Rentals Card (Dynamic Status & Empty State) -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800">Recent Rentals</h3>
+                <a th:href="@{/transactions}" class="text-xs text-blue-600 font-semibold hover:underline">View All →</a>
+            </div>
 
-                <form th:action="@{/rent-bike}" method="post" th:if="${bike.status == 'Available'}">
-                    <input type="hidden" name="bikeId" th:value="${bike.id}" />
-                    <button type="submit" class="btn-rent">Rent Now</button>
-                </form>
+            <!-- Show message if no rentals exist yet -->
+            <div th:if="${#lists.isEmpty(recentRentals)}" class="text-center py-8 text-gray-400 text-sm">
+                No rentals recorded yet.
+            </div>
 
-                <form th:action="@{/return-bike}" method="post" th:if="${bike.status == 'Rented'}">
-                    <input type="hidden" name="bikeId" th:value="${bike.id}" />
-                    <button type="submit" class="btn-return">Return Bike</button>
-                </form>
+            <!-- Dynamic Loop -->
+            <div class="space-y-4" th:unless="${#lists.isEmpty(recentRentals)}">
+                <div th:each="r : ${recentRentals}" class="flex items-center justify-between pb-3 border-b border-gray-100 last:border-none">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-gray-100 rounded-lg"><i data-lucide="bike" class="w-5 h-5 text-gray-600"></i></div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800" th:text="${r.bikeId}">BIK001</p>
+                            <p class="text-xs text-gray-400" th:text="${r.rentalDate != null ? r.rentalDate : 'Today'}">Nov 14, 2026</p>
+                        </div>
+                    </div>
+                    <!-- Dynamic Badge Color -->
+                    <span th:text="${r.status != null ? r.status : 'Ongoing'}"
+                          th:classappend="${r.status == 'Completed' ? 'bg-gray-100 text-gray-700' : 'bg-emerald-100 text-emerald-700'}"
+                          class="px-3 py-1 text-xs font-bold rounded-full">
+                        Ongoing
+                    </span>
+                </div>
             </div>
         </div>
     </div>
+</section>
 </body>
 </html>

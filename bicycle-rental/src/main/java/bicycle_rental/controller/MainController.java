@@ -1,5 +1,7 @@
 package bicycle_rental.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,34 @@ public class MainController {
     @Autowired private RentalService rentalService;
     @Autowired private PasswordEncoder passwordEncoder;
 
+    // Helper method to reliably detect Admin role
+    private boolean checkIsAdmin(Authentication authentication, User currentUser) {
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().toUpperCase().contains("ADMIN"))) {
+            return true;
+        }
+        return currentUser != null && currentUser.getRole() != null
+                && currentUser.getRole().toUpperCase().contains("ADMIN");
+    }
+
+    // Automatically loads logged-in user & role for EVERY page
+    @ModelAttribute
+    public void addGlobalUserAttributes(Model model, Authentication authentication) {
+        if (authentication != null && authentication.isAuthenticated()) {
+            String email = authentication.getName();
+            User currentUser = userRepository.findAll().stream()
+                    .filter(u -> email.equalsIgnoreCase(u.getEmail()) || email.equalsIgnoreCase(u.getId()))
+                    .findFirst()
+                    .orElse(null);
+
+            boolean isAdmin = checkIsAdmin(authentication, currentUser);
+
+            model.addAttribute("username", (currentUser != null) ? currentUser.getName() : email);
+            model.addAttribute("userEmail", email);
+            model.addAttribute("userRole", isAdmin ? "Admin" : "Customer");
+        }
+    }
+
     // Show Login View
     @GetMapping("/login")
     public String loginPage() {
@@ -53,7 +83,7 @@ public class MainController {
     }
 
     // Main Role-Based Dashboard Router
-    @GetMapping("/")
+    @GetMapping({"/", "/dashboard"})
     public String dashboard(Model model, Authentication authentication) {
         if (authentication == null) return "redirect:/login";
 
@@ -63,24 +93,39 @@ public class MainController {
                 .findFirst()
                 .orElse(null);
 
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        model.addAttribute("username", (currentUser != null) ? currentUser.getName() : email);
-        model.addAttribute("userEmail", email);
-        model.addAttribute("userRole", isAdmin ? "Administrator" : "Customer");
+        boolean isAdmin = checkIsAdmin(authentication, currentUser);
 
         if (isAdmin) {
+            List<Rental> allRentals = rentalRepository.findAll();
+            long activeCount = allRentals.stream()
+                    .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()) || "Ongoing".equalsIgnoreCase(r.getStatus()))
+                    .count();
+
+            double totalEarnings = allRentals.stream()
+                    .filter(r -> !"ACTIVE".equalsIgnoreCase(r.getStatus()) && !"Ongoing".equalsIgnoreCase(r.getStatus()))
+                    .mapToDouble(r -> {
+                        Bike b = bikeRepository.findById(r.getBikeId()).orElse(null);
+                        return (b != null && b.getRatePerHour() > 0) ? b.getRatePerHour() : 150.0;
+                    })
+                    .sum();
+
             model.addAttribute("totalBikes", bikeRepository.count());
-            model.addAttribute("activeRentals", rentalRepository.count());
+            model.addAttribute("activeRentals", activeCount);
             model.addAttribute("totalUsers", userRepository.count());
-            model.addAttribute("recentRentals", rentalRepository.findAll().stream().limit(5).toList());
+            model.addAttribute("totalEarnings", totalEarnings);
+            model.addAttribute("recentRentals", allRentals.stream().limit(5).toList());
             return "dashboard";
         } else {
             var sortedBikes = bikeRepository.findAll().stream()
                     .sorted((b1, b2) -> "Available".equalsIgnoreCase(b1.getStatus()) ? -1 : 1)
                     .toList();
+
+            long freeBikesCount = sortedBikes.stream()
+                    .filter(b -> "Available".equalsIgnoreCase(b.getStatus()))
+                    .count();
+
             model.addAttribute("availableBikes", sortedBikes);
+            model.addAttribute("availableFleetCount", freeBikesCount);
 
             if (currentUser != null) {
                 var userRentals = rentalRepository.findAll().stream()
@@ -104,28 +149,31 @@ public class MainController {
         }
     }
 
-    // Rent Bike with Hours, Payment Method & Error Handling
+    // Rent Bike (Works for both Customer & Admin)
     @PostMapping("/rent-bike")
     public String processRental(@RequestParam("bikeId") String bikeId,
+                                @RequestParam(value = "userId", required = false) String userId,
                                 @RequestParam(value = "hours", defaultValue = "1") int hours,
                                 @RequestParam(value = "paymentMethod", defaultValue = "GCash") String paymentMethod,
                                 Authentication authentication,
                                 RedirectAttributes redirectAttributes) {
         try {
-            if (authentication != null) {
+            String targetUserId = userId;
+            if (targetUserId == null || targetUserId.isBlank()) {
                 String email = authentication.getName();
                 User currentUser = userRepository.findAll().stream()
                         .filter(u -> email.equalsIgnoreCase(u.getEmail()) || email.equalsIgnoreCase(u.getId()))
                         .findFirst()
                         .orElse(null);
+                if (currentUser != null) targetUserId = currentUser.getId();
+            }
 
-                if (currentUser != null) {
-                    rentalService.processBikeRental(bikeId, currentUser.getId());
-                    redirectAttributes.addFlashAttribute("message",
+            if (targetUserId != null) {
+                rentalService.processBikeRental(bikeId, targetUserId);
+                redirectAttributes.addFlashAttribute("message",
                         "Booked " + bikeId + " for " + hours + " hr(s) via " + paymentMethod + "!");
-                } else {
-                    redirectAttributes.addFlashAttribute("message", "Error: Logged-in user not found in database.");
-                }
+            } else {
+                redirectAttributes.addFlashAttribute("message", "Error: User not found.");
             }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Could not complete rental: " + e.getMessage());
@@ -133,12 +181,13 @@ public class MainController {
         return "redirect:/";
     }
 
-    // Pay & Return Bike
+    // Pay & Return Bike (Works smoothly for BOTH Customer and Admin)
     @PostMapping("/pay-return")
     public String payAndReturnBike(@RequestParam("rentalId") String rentalId,
+                                   Authentication authentication,
                                    RedirectAttributes redirectAttributes) {
         Rental rental = rentalRepository.findById(rentalId).orElse(null);
-        if (rental != null && "ACTIVE".equalsIgnoreCase(rental.getStatus())) {
+        if (rental != null && ("ACTIVE".equalsIgnoreCase(rental.getStatus()) || "Ongoing".equalsIgnoreCase(rental.getStatus()))) {
             rental.setStatus("PAID & COMPLETED");
             rentalRepository.save(rental);
 
@@ -148,9 +197,13 @@ public class MainController {
                 bikeRepository.save(bike);
             }
             redirectAttributes.addFlashAttribute("message",
-                "Payment settled! Bike " + rental.getBikeId() + " has been returned.");
+                    "Payment settled! Bike " + rental.getBikeId() + " has been returned.");
         }
-        return "redirect:/";
+
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().toUpperCase().contains("ADMIN"));
+
+        return isAdmin ? "redirect:/transactions" : "redirect:/";
     }
 
     // Extend Active Rental (+1 Hour)
@@ -160,7 +213,7 @@ public class MainController {
         Rental rental = rentalRepository.findById(rentalId).orElse(null);
         if (rental != null) {
             redirectAttributes.addFlashAttribute("message",
-                "Rental " + rentalId + " extended by +1 hour!");
+                    "Rental " + rentalId + " extended by +1 hour!");
         }
         return "redirect:/";
     }
@@ -171,7 +224,7 @@ public class MainController {
                               @RequestParam("issueNote") String issueNote,
                               RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("message",
-            "Issue reported for " + bikeId + ": \"" + issueNote + "\". Our mechanics have been notified.");
+                "Issue reported for " + bikeId + ": \"" + issueNote + "\". Our mechanics have been notified.");
         return "redirect:/";
     }
 
@@ -202,10 +255,12 @@ public class MainController {
         return "redirect:/";
     }
 
-    // Admin Page Routes
+    // ================= ADMIN ROUTES =================
+
     @GetMapping("/rentals")
     public String rentalsPage(Model model) {
         model.addAttribute("bikes", bikeRepository.findAll());
+        model.addAttribute("users", userRepository.findAll());
         return "rentals";
     }
 
@@ -215,10 +270,38 @@ public class MainController {
         return "bicycle";
     }
 
+    @PostMapping("/bicycles/save")
+    public String saveBike(@RequestParam(value = "id", required = false) String id,
+                           @RequestParam("model") String bikeModel,
+                           @RequestParam("category") String category,
+                           @RequestParam("ratePerHour") double ratePerHour,
+                           @RequestParam(value = "status", defaultValue = "Available") String status,
+                           RedirectAttributes redirectAttributes) {
+        String bikeId = (id != null && !id.isBlank()) ? id : "BIK" + (100 + bikeRepository.count() + 1);
+        Bike bike = new Bike(bikeId, bikeModel, category, ratePerHour, status);
+        bikeRepository.save(bike);
+        redirectAttributes.addFlashAttribute("message", "Bicycle " + bikeId + " saved!");
+        return "redirect:/bicycles";
+    }
+
+    @PostMapping("/bicycles/delete/{id}")
+    public String deleteBike(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        bikeRepository.deleteById(id);
+        redirectAttributes.addFlashAttribute("message", "Bicycle " + id + " deleted.");
+        return "redirect:/bicycles";
+    }
+
     @GetMapping("/users")
     public String usersPage(Model model) {
         model.addAttribute("users", userRepository.findAll());
         return "users";
+    }
+
+    @PostMapping("/users/delete/{id}")
+    public String deleteUser(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        userRepository.deleteById(id);
+        redirectAttributes.addFlashAttribute("message", "User removed.");
+        return "redirect:/users";
     }
 
     @GetMapping("/transactions")
@@ -230,7 +313,12 @@ public class MainController {
     @GetMapping("/receipt/{id}")
     public String receiptPage(@PathVariable String id, Model model) {
         Rental rental = rentalRepository.findById(id).orElse(null);
+        Bike bike = (rental != null) ? bikeRepository.findById(rental.getBikeId()).orElse(null) : null;
+        User customer = (rental != null) ? userRepository.findById(rental.getUserId()).orElse(null) : null;
+
         model.addAttribute("rental", rental);
+        model.addAttribute("bike", bike);
+        model.addAttribute("customer", customer);
         return "receipt";
     }
 }

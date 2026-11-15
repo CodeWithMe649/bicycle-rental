@@ -2,42 +2,47 @@
 <html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'dashboard')}">
 <body>
 <section>
+    <!-- Flash Message Alert -->
+    <div th:if="${message}" class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center justify-between">
+        <span th:text="${message}">Success!</span>
+    </div>
+
     <!-- Header -->
     <div class="mb-6">
         <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <p class="text-gray-500">Welcome back, Christian! 👋</p>
+        <p class="text-gray-500">Welcome back, <span th:text="${username}">Christian</span>! 👋</p>
     </div>
 
-    <!-- Stat Metric Cards -->
+    <!-- Stat Metric Cards (All Clickable) -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-blue-100 border border-blue-200 p-5 rounded-2xl flex items-center gap-4">
+        <a th:href="@{/bicycles}" class="bg-blue-100 border border-blue-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
             <div class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bike"></i></div>
             <div>
                 <p class="text-xs text-gray-500 font-semibold uppercase">Total Bikes</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalBikes}">24</h3>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalBikes}">0</h3>
             </div>
-        </div>
-        <div class="bg-emerald-100 border border-emerald-200 p-5 rounded-2xl flex items-center gap-4">
+        </a>
+        <a th:href="@{/transactions}" class="bg-emerald-100 border border-emerald-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
             <div class="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="calendar"></i></div>
             <div>
                 <p class="text-xs text-gray-500 font-semibold uppercase">Active Rentals</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="${activeRentals}">8</h3>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${activeRentals}">0</h3>
             </div>
-        </div>
-        <div class="bg-orange-100 border border-orange-200 p-5 rounded-2xl flex items-center gap-4">
+        </a>
+        <a th:href="@{/users}" class="bg-orange-100 border border-orange-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
             <div class="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center"><i data-lucide="users"></i></div>
             <div>
                 <p class="text-xs text-gray-500 font-semibold uppercase">Total Users</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalUsers}">120</h3>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalUsers}">0</h3>
             </div>
-        </div>
-        <div class="bg-indigo-100 border border-indigo-200 p-5 rounded-2xl flex items-center gap-4">
+        </a>
+        <a th:href="@{/transactions}" class="bg-indigo-100 border border-indigo-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
             <div class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bar-chart-3"></i></div>
             <div>
-                <p class="text-xs text-gray-500 font-semibold uppercase">Today's Earnings</p>
-                <h3 class="text-2xl font-bold text-gray-800">₱1,250</h3>
+                <p class="text-xs text-gray-500 font-semibold uppercase">Total Earnings</p>
+                <h3 class="text-2xl font-bold text-gray-800" th:text="'₱' + ${#numbers.formatDecimal(totalEarnings != null ? totalEarnings : 0, 1, 'COMMA', 2, 'POINT')}">₱0.00</h3>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Main Banner & Recent Activity Split -->
@@ -48,9 +53,12 @@
                 <h2 class="text-3xl font-extrabold mb-2">Bicycle Rental<br>Management System</h2>
                 <p class="text-blue-200 text-sm">Rent a bike. Enjoy the ride!</p>
             </div>
-            <div>
+            <div class="flex gap-3">
                 <a th:href="@{/rentals}" class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition">
                     New Rental <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+                <a th:href="@{/bicycles}" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition">
+                    Manage Fleet
                 </a>
             </div>
         </div>
@@ -61,16 +69,21 @@
                 <h3 class="font-bold text-gray-800">Recent Rentals</h3>
                 <a th:href="@{/transactions}" class="text-xs text-blue-600 font-semibold hover:underline">View All →</a>
             </div>
+            <div th:if="${#lists.isEmpty(recentRentals)}" class="text-sm text-gray-400 py-6 text-center">
+                No rentals found.
+            </div>
             <div class="space-y-4">
                 <div th:each="r : ${recentRentals}" class="flex items-center justify-between pb-3 border-b border-gray-100 last:border-none">
                     <div class="flex items-center gap-3">
                         <div class="p-2 bg-gray-100 rounded-lg"><i data-lucide="bike" class="w-5 h-5 text-gray-600"></i></div>
                         <div>
-                            <p class="text-sm font-semibold text-gray-800" th:text="${r.bikeId}">Mountain Bike #001</p>
-                            <p class="text-xs text-gray-400">Nov 11, 2026</p>
+                            <p class="text-sm font-semibold text-gray-800" th:text="${r.bikeId}">BIK001</p>
+                            <p class="text-xs text-gray-400" th:text="${r.startTime != null ? #temporals.format(r.startTime, 'MMM dd, yyyy') : 'Recent'}">Nov 14, 2026</p>
                         </div>
                     </div>
-                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">Ongoing</span>
+                    <span th:text="${r.status}"
+                          th:classappend="${r.status == 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}"
+                          class="px-3 py-1 text-xs font-bold rounded-full">ACTIVE</span>
                 </div>
             </div>
         </div>

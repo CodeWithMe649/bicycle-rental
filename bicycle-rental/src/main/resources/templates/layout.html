@@ -1,84 +1,95 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="main-layout(content, activeTab)">
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="main-layout(content, activePage)">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BikeRent - Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-slate-100 min-h-screen flex text-gray-700">
+<body class="bg-slate-50 text-gray-800 min-h-screen flex">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-[#0B1E3D] text-white flex flex-col justify-between shrink-0">
+    <!-- Left Sidebar -->
+    <aside class="w-64 bg-[#0B1936] text-white flex flex-col justify-between shrink-0 min-h-screen">
         <div>
-            <!-- App Logo -->
-            <div class="p-6 flex items-center gap-3">
-                <div class="p-2 border border-white/20 rounded-full bg-blue-600/30">
-                    <i data-lucide="bike" class="w-6 h-6 text-white"></i>
+            <!-- Brand Header -->
+            <div class="p-6 flex items-center gap-3 border-b border-white/10">
+                <div class="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                    <i data-lucide="bike" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-none">BikeRent</h1>
-                    <p class="text-[10px] text-blue-300 tracking-wide mt-1">Ride. Rent. Repeat.</p>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">BikeRent</h1>
+                    <p class="text-[11px] text-blue-300/70">Ride. Rent. Repeat.</p>
                 </div>
             </div>
 
             <!-- Navigation Links -->
-            <nav class="px-4 space-y-1 mt-4">
-                <a th:href="@{/}" 
-                   th:classappend="${activeTab == 'dashboard'} ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/5'" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+            <nav class="p-4 space-y-1.5 text-sm font-medium">
+                <a th:href="@{/dashboard}"
+                   th:classappend="${activePage == 'dashboard'} ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>Dashboard</span>
                 </a>
 
-                <!-- Admin-Only Sidebar Links -->
-                <a th:if="${userRole == 'Administrator'}" th:href="@{/bicycles}" 
-                   th:classappend="${activeTab == 'bicycles'} ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/5'" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition">
-                    <i data-lucide="list" class="w-5 h-5"></i> Bicycles
+                <a th:href="@{/bicycles}"
+                   th:classappend="${activePage == 'bicycles'} ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                    <span>Bicycles</span>
                 </a>
 
-                <a th:if="${userRole == 'Administrator'}" th:href="@{/users}" 
-                   th:classappend="${activeTab == 'users'} ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/5'" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition">
-                    <i data-lucide="users" class="w-5 h-5"></i> Users
+                <a th:href="@{/users}"
+                   th:classappend="${activePage == 'users'} ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span>Users</span>
                 </a>
 
-                <a th:if="${userRole == 'Administrator'}" th:href="@{/transactions}" 
-                   th:classappend="${activeTab == 'transactions'} ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/5'" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition">
-                    <i data-lucide="receipt" class="w-5 h-5"></i> Transactions
+                <a th:href="@{/transactions}"
+                   th:classappend="${activePage == 'transactions'} ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                    <span>Transactions</span>
                 </a>
             </nav>
         </div>
 
-        <!-- Logout Button -->
+        <!-- Logout Footer -->
         <div class="p-4 border-t border-white/10">
             <form th:action="@{/logout}" method="post">
-                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition">
-                    <i data-lucide="log-out" class="w-5 h-5"></i> Logout
+                <button type="submit"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Logout</span>
                 </button>
             </form>
         </div>
     </aside>
 
-    <!-- Main Content Body -->
-    <div class="flex-1 flex flex-col">
-        <!-- Header -->
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
-            <span class="text-sm font-semibold text-gray-500" th:text="'Role: ' + ${userRole}">Role</span>
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm"
-                     th:text="${#strings.substring(username, 0, 1)}">C</div>
-                <span class="font-bold text-sm text-gray-800" th:text="${username}">User</span>
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Top Header Bar -->
+        <header class="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
+            <div class="text-sm text-gray-500 font-medium">
+                Role: <span class="text-gray-800 font-semibold" th:text="${userRole != null ? userRole : 'Admin'}">Admin</span>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center uppercase"
+                     th:text="${username != null ? #strings.substring(username, 0, 1) : 'C'}">C</div>
+                <span class="text-sm font-semibold text-gray-800" th:text="${username != null ? username : 'Christian'}">Christian</span>
             </div>
         </header>
 
-        <!-- Main Page View -->
-        <main class="p-8 flex-1 overflow-y-auto">
+        <!-- Page Body -->
+        <main class="p-8 flex-1">
             <div th:replace="${content}"></div>
         </main>
     </div>
 
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
