@@ -2,10 +2,12 @@ package bicycle_rental.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.LookupOperation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,96 +19,102 @@ import bicycle_rental.repository.RentalRepository;
 @Service
 public class RentalService {
 
-    @Autowired
-    private BikeRepository bikeRepository;
+    @Autowired private BikeRepository bikeRepository;
+    @Autowired private RentalRepository rentalRepository;
+    @Autowired private MongoTemplate mongoTemplate;
 
-    @Autowired
-    private RentalRepository rentalRepository;
-
-    // Overloaded helper for backward compatibility
     @Transactional(rollbackFor = Exception.class)
-    public synchronized void processBikeRental(String bikeId, String userId) {
-        processBikeRental(bikeId, userId, 1, "GCash");
-    }
+    public Rental processBikeRental(String bikeId, String userId, int hours, String paymentMethod) {
+        if (hours < 1 || hours > 24) {
+            throw new IllegalArgumentException("Rental duration must be between 1 and 24 hours.");
+        }
 
-    // Combines Java thread lock + @Transactional rollback + MongoDB @Version optimistic locking
-    @Transactional(rollbackFor = Exception.class)
-    public synchronized Rental processBikeRental(String bikeId, String userId, int hours, String paymentMethod) {
+        Bike bike = bikeRepository.findById(bikeId)
+                .orElseThrow(() -> new RuntimeException("Bicycle not found: " + bikeId));
+
+        if (!"Available".equalsIgnoreCase(bike.getStatus())) {
+            throw new IllegalStateException("Bicycle " + bikeId + " is currently unavailable (" + bike.getStatus() + ").");
+        }
+
         try {
-            Bike bike = bikeRepository.findById(bikeId)
-                    .orElseThrow(() -> new RuntimeException("Bike not found: " + bikeId));
-
-            // Double-check lock state inside critical section
-            if (!"Available".equalsIgnoreCase(bike.getStatus())) {
-                throw new RuntimeException("Transaction Conflict Prevented: Bike " + bikeId + " is currently " + bike.getStatus() + ".");
-            }
-
-            int validHours = Math.max(1, hours);
-            double rate = (bike.getRatePerHour() > 0) ? bike.getRatePerHour() : 150.0;
-            LocalDateTime now = LocalDateTime.now();
-
-            // 1. Lock & Update Bike Status to Rented (increments @Version in MongoDB)
             bike.setStatus("Rented");
             bikeRepository.save(bike);
 
-            // 2. Create New Active Rental with guaranteed unique alphanumeric Primary Key
-            String uniqueRentalId = "RNT2026" + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
-            Rental rental = new Rental(
-                    uniqueRentalId,
-                    bikeId,
-                    userId,
-                    now,
-                    "ACTIVE"
-            );
-            rental.setBookedHours(validHours);
-            rental.setDueTime(now.plusHours(validHours));
-            rental.setPaymentMethod(paymentMethod != null ? paymentMethod : "GCash");
-            rental.setBaseAmount(rate * validHours);
+            LocalDateTime now = LocalDateTime.now();
+            double rate = (bike.getRatePerHour() > 0) ? bike.getRatePerHour() : 150.0;
+            double baseCost = rate * hours;
+
+            Rental rental = new Rental(null, bikeId, userId, now, "ACTIVE");
+            rental.setBookedHours(hours);
+            rental.setDueTime(now.plusHours(hours));
+            rental.setPaymentMethod((paymentMethod != null && !paymentMethod.isBlank()) ? paymentMethod : "GCash");
+            rental.setBaseAmount(baseCost);
             rental.setLateFee(0.0);
-            rental.setTotalPaid(rate * validHours);
+            rental.setTotalPaid(baseCost);
 
             return rentalRepository.save(rental);
 
-        } catch (OptimisticLockingFailureException e) {
-            throw new RuntimeException("Database Lock Conflict: Another user just booked this bike. Transaction rolled back.");
+        } catch (OptimisticLockingFailureException ex) {
+            throw new RuntimeException("Concurrency lock triggered: Another rider just booked this bicycle. Please choose another unit.");
         }
     }
 
-    // Settles rental, computes overdue late fees if past dueTime, and releases bike back to Available
     @Transactional(rollbackFor = Exception.class)
-    public synchronized Rental settleAndReturnBike(String rentalId) {
+    public Rental settleAndReturnBike(String rentalId) {
         Rental rental = rentalRepository.findById(rentalId)
-                .orElseThrow(() -> new RuntimeException("Rental not found: " + rentalId));
+                .orElseThrow(() -> new RuntimeException("Rental record not found: " + rentalId));
 
         if (!"ACTIVE".equalsIgnoreCase(rental.getStatus()) && !"Ongoing".equalsIgnoreCase(rental.getStatus())) {
-            return rental;
+            throw new IllegalStateException("This rental is already settled.");
         }
 
-        Bike bike = bikeRepository.findById(rental.getBikeId()).orElse(null);
-        double hourlyRate = (bike != null && bike.getRatePerHour() > 0) ? bike.getRatePerHour() : 150.0;
+        Bike bike = bikeRepository.findById(rental.getBikeId())
+                .orElseThrow(() -> new RuntimeException("Associated bicycle not found."));
 
-        double base = (rental.getBaseAmount() > 0)
-                ? rental.getBaseAmount()
-                : hourlyRate * Math.max(1, rental.getBookedHours());
-        double penalty = rental.calculateCurrentLateFee(hourlyRate);
+        try {
+            double hourlyRate = (bike.getRatePerHour() > 0) ? bike.getRatePerHour() : 150.0;
+            double base = (rental.getBaseAmount() > 0)
+                    ? rental.getBaseAmount()
+                    : hourlyRate * Math.max(1, rental.getBookedHours());
+            double penalty = rental.calculateCurrentLateFee(hourlyRate);
 
-        rental.setBaseAmount(base);
-        rental.setLateFee(penalty);
-        rental.setTotalPaid(base + penalty);
-        rental.setReturnTime(LocalDateTime.now());
-        rental.setStatus("PAID & COMPLETED");
-        rentalRepository.save(rental);
+            rental.setReturnTime(LocalDateTime.now());
+            rental.setBaseAmount(base);
+            rental.setLateFee(penalty);
+            rental.setTotalPaid(base + penalty);
+            rental.setStatus("COMPLETED");
+            Rental savedRental = rentalRepository.save(rental);
 
-        if (bike != null) {
             bike.setStatus("Available");
             bikeRepository.save(bike);
-        }
 
-        return rental;
+            return savedRental;
+
+        } catch (OptimisticLockingFailureException ex) {
+            throw new RuntimeException("Concurrency lock triggered: Return is already being processed.");
+        }
     }
 
-    // Retrieves joined Rental + Bike + User records using MongoDB $lookup
     public List<Rental> getAllJoinedRentals() {
-        return rentalRepository.findAllWithJoinedDetails();
+        LookupOperation lookupBike = LookupOperation.newLookup()
+                .from("bikes")
+                .localField("bikeId")
+                .foreignField("_id")
+                .as("bikeDetails");
+
+        LookupOperation lookupUser = LookupOperation.newLookup()
+                .from("users")
+                .localField("userId")
+                .foreignField("_id")
+                .as("userDetails");
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                lookupBike,
+                Aggregation.unwind("bikeDetails", true),
+                lookupUser,
+                Aggregation.unwind("userDetails", true)
+        );
+
+        return mongoTemplate.aggregate(aggregation, "rentals", Rental.class).getMappedResults();
     }
 }

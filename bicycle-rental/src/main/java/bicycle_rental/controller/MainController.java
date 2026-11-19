@@ -36,7 +36,6 @@ public class MainController {
     @Autowired private RentalService rentalService;
     @Autowired private PasswordEncoder passwordEncoder;
 
-    // Helper method to reliably detect Admin role
     private boolean checkIsAdmin(Authentication authentication, User currentUser) {
         if (authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().toUpperCase().contains("ADMIN"))) {
@@ -46,7 +45,6 @@ public class MainController {
                 && currentUser.getRole().toUpperCase().contains("ADMIN");
     }
 
-    // Helper to calculate settled revenue including any late fees
     private double computeRentalRevenue(Rental r, Map<String, Bike> bikeMap) {
         if (r.getTotalPaid() > 0) {
             return r.getTotalPaid();
@@ -56,7 +54,6 @@ public class MainController {
         return rate * Math.max(1, r.getBookedHours());
     }
 
-    // Automatically loads logged-in user & role for EVERY page
     @ModelAttribute
     public void addGlobalUserAttributes(Model model, Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()) {
@@ -74,30 +71,48 @@ public class MainController {
         }
     }
 
-    // Show Login View
     @GetMapping("/login")
     public String loginPage() {
         return "login";
     }
 
-    // Show Registration View
     @GetMapping("/register")
     public String registerPage(Model model) {
         model.addAttribute("user", new User());
         return "register";
     }
 
-    // Process New User Registration with Alphanumeric Primary Key & BCrypt Hashing
     @PostMapping("/register")
-    public String registerUser(@ModelAttribute("user") User user) {
+    public String registerUser(@ModelAttribute("user") User user, RedirectAttributes redirectAttributes) {
+        if (user.getName() == null || user.getName().trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Full name is required.");
+            return "redirect:/register";
+        }
+        if (user.getEmail() == null || !user.getEmail().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            redirectAttributes.addFlashAttribute("error", "Please enter a valid email address.");
+            return "redirect:/register";
+        }
+        if (user.getPassword() == null || user.getPassword().length() < 6) {
+            redirectAttributes.addFlashAttribute("error", "Password must be at least 6 characters long.");
+            return "redirect:/register";
+        }
+
+        boolean emailExists = userRepository.findAll().stream()
+                .anyMatch(u -> user.getEmail().trim().equalsIgnoreCase(u.getEmail()));
+        if (emailExists) {
+            redirectAttributes.addFlashAttribute("error", "An account with this email already exists.");
+            return "redirect:/register";
+        }
+
         user.setId("USR2026" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
+        user.setName(user.getName().trim());
+        user.setEmail(user.getEmail().trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole("ROLE_CUSTOMER");
         userRepository.save(user);
         return "redirect:/login?registered";
     }
 
-    // Main Role-Based Dashboard Router
     @GetMapping({"/", "/dashboard"})
     public String dashboard(Model model, Authentication authentication) {
         if (authentication == null) return "redirect:/login";
@@ -185,7 +200,6 @@ public class MainController {
         }
     }
 
-    // Rent Bike (Enforces One-Bike-Per-User Safeguard, Atomic Locking & Billing)
     @PostMapping("/rent-bike")
     public String processRental(@RequestParam("bikeId") String bikeId,
                                 @RequestParam(value = "userId", required = false) String userId,
@@ -231,7 +245,6 @@ public class MainController {
         return "redirect:/";
     }
 
-    // Pay & Return Bike (Automatically calculates overdue late fees)
     @PostMapping("/pay-return")
     public String payAndReturnBike(@RequestParam("rentalId") String rentalId,
                                    Authentication authentication,
@@ -257,7 +270,6 @@ public class MainController {
         return isAdmin ? "redirect:/dashboard" : "redirect:/";
     }
 
-    // Extend Active Rental (+1 Hour & Updates Base Billing)
     @PostMapping("/extend-rental")
     public String extendRental(@RequestParam("rentalId") String rentalId,
                                RedirectAttributes redirectAttributes) {
@@ -279,7 +291,6 @@ public class MainController {
         return "redirect:/";
     }
 
-    // Report Bike Maintenance Issue (Flags docked bikes to Maintenance in MongoDB)
     @PostMapping("/report-issue")
     public String reportIssue(@RequestParam(value = "bikeId", required = false) String bikeId,
                               @RequestParam("issueNote") String issueNote,
@@ -301,7 +312,6 @@ public class MainController {
         return "redirect:/";
     }
 
-    // Update Customer Profile Name / Password
     @PostMapping("/update-profile")
     public String updateProfile(@RequestParam("newName") String newName,
                                 @RequestParam(value = "newPassword", required = false) String newPassword,
@@ -319,6 +329,10 @@ public class MainController {
                     currentUser.setName(newName.trim());
                 }
                 if (newPassword != null && !newPassword.isBlank()) {
+                    if (newPassword.length() < 6) {
+                        redirectAttributes.addFlashAttribute("message", "Error: New password must be at least 6 characters.");
+                        return "redirect:/";
+                    }
                     currentUser.setPassword(passwordEncoder.encode(newPassword));
                 }
                 userRepository.save(currentUser);
@@ -327,8 +341,6 @@ public class MainController {
         }
         return "redirect:/";
     }
-
-    // ================= ADMIN ROUTES =================
 
     @GetMapping("/rentals")
     public String rentalsPage(Model model) {
@@ -350,13 +362,22 @@ public class MainController {
                            @RequestParam("ratePerHour") double ratePerHour,
                            @RequestParam(value = "status", defaultValue = "Available") String status,
                            RedirectAttributes redirectAttributes) {
+        if (bikeModel == null || bikeModel.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("message", "Validation Error: Bicycle model cannot be empty.");
+            return "redirect:/bicycles";
+        }
+        if (ratePerHour <= 0) {
+            redirectAttributes.addFlashAttribute("message", "Validation Error: Hourly rate must be greater than ₱0.");
+            return "redirect:/bicycles";
+        }
+
         String bikeId = (id != null && !id.isBlank())
                 ? id
                 : "BIK2026" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         Bike bike = (id != null && !id.isBlank())
-                ? bikeRepository.findById(id).orElse(new Bike(bikeId, bikeModel, category, ratePerHour, status))
-                : new Bike(bikeId, bikeModel, category, ratePerHour, status);
-        bike.setModel(bikeModel);
+                ? bikeRepository.findById(id).orElse(new Bike(bikeId, bikeModel.trim(), category, ratePerHour, status))
+                : new Bike(bikeId, bikeModel.trim(), category, ratePerHour, status);
+        bike.setModel(bikeModel.trim());
         bike.setCategory(category);
         bike.setRatePerHour(ratePerHour);
         bike.setStatus(status);

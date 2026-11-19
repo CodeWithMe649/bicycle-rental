@@ -63,7 +63,6 @@ public class Rental {
         return deadline != null && LocalDateTime.now().isAfter(deadline);
     }
 
-    // Calculates real-time overdue penalty (charges 1 full hourly rate per started overdue hour)
     public double calculateCurrentLateFee(double hourlyRate) {
         LocalDateTime deadline = getEffectiveDueTime();
         if (deadline == null || !LocalDateTime.now().isAfter(deadline)) {

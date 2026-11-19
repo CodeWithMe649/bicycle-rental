@@ -6,6 +6,9 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+
 @Document(collection = "bikes")
 public class Bike {
 
@@ -15,9 +18,16 @@ public class Bike {
     @Version
     private Long version; // Database-level optimistic locking
 
+    @NotBlank(message = "Bicycle model is required")
     private String model;
+
+    @NotBlank(message = "Category is required")
     private String category;
+
+    @Positive(message = "Hourly rate must be greater than zero")
     private double ratePerHour;
+
+    @NotBlank(message = "Status is required")
     private String status;
 
     public Bike() {
