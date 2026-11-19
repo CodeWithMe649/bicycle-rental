@@ -1,59 +1,158 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'transactions')}">
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main-layout(~{::content}, 'transactions')}">
 <body>
-<section>
-    <div th:if="${message}" class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium" th:text="${message}"></div>
+<div th:fragment="content" class="max-w-[1440px] mx-auto space-y-5">
 
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900">Rental Transactions</h2>
-            <p class="text-gray-500">Track active rentals, settle returns, and view receipts.</p>
+    <!-- Dark Command Header & Revenue Readout -->
+    <div class="bg-zinc-900 text-white rounded-xl p-5 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-amber-400">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-bold tracking-tight text-white">Transaction Audit Ledger</h2>
+                        <span class="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-zinc-800 text-zinc-300 border border-zinc-700 rounded"
+                              th:text="${rentals != null ? #lists.size(rentals) + ' Entries' : '0 Entries'}">0 Entries</span>
+                    </div>
+                    <p class="text-xs text-zinc-400 mt-0.5">Complete log of active dispatches, overdue flags, and settled payments.</p>
+                </div>
+            </div>
+
+            <!-- Settled Revenue Badge -->
+            <div class="bg-zinc-950 border border-zinc-800 px-4 py-2.5 rounded-lg text-left sm:text-right">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">Settled Revenue</span>
+                <span class="text-lg font-extrabold font-mono text-emerald-400"
+                      th:text="'₱' + ${#numbers.formatDecimal(totalRevenue != null ? totalRevenue : 0, 1, 'COMMA', 2, 'POINT')}">₱0.00</span>
+            </div>
         </div>
-        <a th:href="@{/rentals}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow transition">
-            <i data-lucide="plus" class="w-4 h-4"></i> New Rental
-        </a>
+
+        <!-- Search & Status Filter Strip -->
+        <div class="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+            <input type="text" id="txSearch" onkeyup="filterTransactions()" placeholder="Search rental ID, bike, or rider..."
+                   class="w-full sm:w-80 px-3.5 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400">
+
+            <div class="flex gap-1.5 w-full sm:w-auto overflow-x-auto bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+                <button type="button" onclick="setTxFilter('ALL', this)"
+                        class="tx-btn px-3 py-1 rounded-md text-xs font-bold bg-amber-400 text-zinc-950 transition">All</button>
+                <button type="button" onclick="setTxFilter('OVERDUE', this)"
+                        class="tx-btn px-3 py-1 rounded-md text-xs font-semibold text-zinc-400 hover:text-white transition">Overdue</button>
+                <button type="button" onclick="setTxFilter('ACTIVE', this)"
+                        class="tx-btn px-3 py-1 rounded-md text-xs font-semibold text-zinc-400 hover:text-white transition">Active</button>
+                <button type="button" onclick="setTxFilter('COMPLETED', this)"
+                        class="tx-btn px-3 py-1 rounded-md text-xs font-semibold text-zinc-400 hover:text-white transition">Settled</button>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-400 font-semibold">
-                    <th class="py-4 px-6">Rental ID</th>
-                    <th class="py-4 px-6">Bike ID</th>
-                    <th class="py-4 px-6">Customer ID</th>
-                    <th class="py-4 px-6">Start Time</th>
-                    <th class="py-4 px-6">Status</th>
-                    <th class="py-4 px-6 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 text-sm">
-                <tr th:each="r : ${rentals}" class="hover:bg-gray-50 transition">
-                    <td class="py-4 px-6 font-semibold text-gray-800" th:text="${r.id}">RNT001</td>
-                    <td class="py-4 px-6 text-gray-700" th:text="${r.bikeId}">BIK101</td>
-                    <td class="py-4 px-6 text-gray-500" th:text="${r.userId}">USR001</td>
-                    <td class="py-4 px-6 text-gray-500" th:text="${r.startTime != null ? #temporals.format(r.startTime, 'MMM dd, yyyy HH:mm') : 'N/A'}">Nov 14, 2026</td>
-                    <td class="py-4 px-6">
-                        <span th:text="${r.status}"
-                              th:classappend="${r.status == 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}"
-                              class="px-3 py-1 rounded-full text-xs font-semibold">ACTIVE</span>
-                    </td>
-                    <td class="py-4 px-6 text-right space-x-2">
-                        <!-- Return Bike Button (Only shows for ACTIVE rentals) -->
-                        <form th:if="${r.status == 'ACTIVE'}" th:action="@{/pay-return}" method="post" class="inline">
-                            <input type="hidden" name="rentalId" th:value="${r.id}" />
-                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
-                                Return Bike
-                            </button>
-                        </form>
-                        <!-- View Receipt Link -->
-                        <a th:href="@{/receipt/{id}(id=${r.id})}" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg transition inline-block">
-                            Receipt
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Low-Glare Stone Table Container -->
+    <div class="bg-stone-100 border border-stone-300/80 rounded-xl overflow-hidden shadow-xs">
+        <div th:if="${#lists.isEmpty(rentals)}" class="p-12 text-center text-stone-500 text-xs font-mono">
+            No rental transactions recorded yet.
+        </div>
+
+        <div th:if="${!#lists.isEmpty(rentals)}" class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-zinc-900 text-zinc-400 text-[11px] font-mono font-semibold uppercase tracking-wider border-b border-zinc-800">
+                        <th class="px-5 py-3.5">Rental Ref</th>
+                        <th class="px-5 py-3.5">Bicycle Unit</th>
+                        <th class="px-5 py-3.5">Rider &amp; ID</th>
+                        <th class="px-5 py-3.5">Dispatch Time</th>
+                        <th class="px-5 py-3.5">Status</th>
+                        <th class="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-stone-200/90 text-xs">
+                    <tr th:each="r : ${rentals}"
+                        th:attr="data-tx-state=${r.overdue ? 'OVERDUE' : ((r.status == 'ACTIVE' || r.status == 'Ongoing') ? 'ACTIVE' : 'COMPLETED')}"
+                        th:classappend="${r.overdue} ? 'bg-rose-500/5 hover:bg-rose-500/10' : 'hover:bg-stone-200/60'"
+                        class="tx-row transition">
+                        <td class="px-5 py-3.5">
+                            <span class="font-mono font-bold text-zinc-900" th:text="${r.id}">RNT001</span>
+                        </td>
+
+                        <td class="px-5 py-3.5" th:with="bike=${bikeMap != null ? bikeMap[r.bikeId] : null}">
+                            <span class="px-2 py-0.5 rounded bg-zinc-900 text-amber-400 font-mono font-bold text-[11px]"
+                                  th:text="${r.bikeId}">BIK101</span>
+                            <p class="text-[11px] text-stone-600 mt-1"
+                               th:text="${bike != null ? bike.model : 'Standard Bicycle'}">Mountain Bike</p>
+                        </td>
+
+                        <td class="px-5 py-3.5" th:with="borrower=${userMap != null ? userMap[r.userId] : null}">
+                            <p class="font-bold text-zinc-900"
+                               th:text="${borrower != null ? borrower.name : r.userId}">Customer Name</p>
+                            <p class="text-[11px] font-mono text-stone-500"
+                               th:text="${borrower != null && borrower.validIdNumber != null ? 'ID: ' + borrower.validIdNumber : r.userId}">USR001</p>
+                        </td>
+
+                        <td class="px-5 py-3.5 font-mono text-[11px] text-stone-600"
+                            th:text="${r.rentTime != null ? #temporals.format(r.rentTime, 'MMM dd, yyyy hh:mm a') : 'Recorded'}">
+                            Nov 15, 2026
+                        </td>
+
+                        <td class="px-5 py-3.5">
+                            <span th:if="${r.overdue}"
+                                  class="px-2.5 py-0.5 rounded text-[10px] font-mono font-extrabold uppercase bg-rose-500/15 text-rose-700 border border-rose-500/30">
+                                OVERDUE
+                            </span>
+                            <span th:if="${!r.overdue && (r.status == 'ACTIVE' || r.status == 'Ongoing')}"
+                                  class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-500/15 text-amber-900 border border-amber-500/30">
+                                ACTIVE
+                            </span>
+                            <span th:if="${r.status != 'ACTIVE' && r.status != 'Ongoing'}"
+                                  class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-800 border border-emerald-500/30"
+                                  th:text="${r.status}">
+                                PAID &amp; COMPLETED
+                            </span>
+                        </td>
+
+                        <td class="px-5 py-3.5 text-right space-x-1.5">
+                            <a th:href="@{'/receipt/' + ${r.id}}"
+                               class="inline-block bg-stone-200 hover:bg-zinc-900 text-zinc-800 hover:text-white border border-stone-300 font-semibold text-xs px-3 py-1.5 rounded-lg transition">
+                                Receipt
+                            </a>
+
+                            <form th:if="${r.status == 'ACTIVE' || r.status == 'Ongoing'}"
+                                  th:action="@{/pay-return}" method="post" class="inline">
+                                <input type="hidden" name="rentalId" th:value="${r.id}">
+                                <button type="submit"
+                                        class="bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition">
+                                    Settle
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</section>
+
+    <script>
+        let currentTxState = 'ALL';
+
+        function setTxFilter(state, btn) {
+            currentTxState = state;
+            document.querySelectorAll('.tx-btn').forEach(b => {
+                b.className = 'tx-btn px-3 py-1 rounded-md text-xs font-semibold text-zinc-400 hover:text-white transition';
+            });
+            btn.className = 'tx-btn px-3 py-1 rounded-md text-xs font-bold bg-amber-400 text-zinc-950 transition';
+            filterTransactions();
+        }
+
+        function filterTransactions() {
+            const q = (document.getElementById('txSearch').value || '').toLowerCase();
+            document.querySelectorAll('.tx-row').forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const state = row.dataset.txState;
+                const matchText = text.includes(q);
+                const matchState = currentTxState === 'ALL' || state === currentTxState;
+                row.style.display = (matchText && matchState) ? '' : 'none';
+            });
+        }
+    </script>
+</div>
 </body>
 </html>

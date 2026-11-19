@@ -1,6 +1,11 @@
 package bicycle_rental.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -41,6 +46,16 @@ public class MainController {
                 && currentUser.getRole().toUpperCase().contains("ADMIN");
     }
 
+    // Helper to calculate settled revenue including any late fees
+    private double computeRentalRevenue(Rental r, Map<String, Bike> bikeMap) {
+        if (r.getTotalPaid() > 0) {
+            return r.getTotalPaid();
+        }
+        Bike b = (r.getBikeDetails() != null) ? r.getBikeDetails() : bikeMap.get(r.getBikeId());
+        double rate = (b != null && b.getRatePerHour() > 0) ? b.getRatePerHour() : 150.0;
+        return rate * Math.max(1, r.getBookedHours());
+    }
+
     // Automatically loads logged-in user & role for EVERY page
     @ModelAttribute
     public void addGlobalUserAttributes(Model model, Authentication authentication) {
@@ -72,10 +87,10 @@ public class MainController {
         return "register";
     }
 
-    // Process New User Registration
+    // Process New User Registration with Alphanumeric Primary Key & BCrypt Hashing
     @PostMapping("/register")
     public String registerUser(@ModelAttribute("user") User user) {
-        user.setId("USR" + System.currentTimeMillis());
+        user.setId("USR2026" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole("ROLE_CUSTOMER");
         userRepository.save(user);
@@ -96,21 +111,42 @@ public class MainController {
         boolean isAdmin = checkIsAdmin(authentication, currentUser);
 
         if (isAdmin) {
-            List<Rental> allRentals = rentalRepository.findAll();
-            long activeCount = allRentals.stream()
-                    .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()) || "Ongoing".equalsIgnoreCase(r.getStatus()))
+            List<Bike> allBikes = bikeRepository.findAll();
+            long availableCount = allBikes.stream()
+                    .filter(b -> "Available".equalsIgnoreCase(b.getStatus()))
                     .count();
+            long rentedCount = allBikes.stream()
+                    .filter(b -> "Rented".equalsIgnoreCase(b.getStatus()) || "In Use".equalsIgnoreCase(b.getStatus()))
+                    .count();
+            long maintenanceCount = allBikes.stream()
+                    .filter(b -> "Maintenance".equalsIgnoreCase(b.getStatus()))
+                    .count();
+
+            List<Rental> allRentals = rentalRepository.findAll();
+            List<Rental> activeRentalsList = allRentals.stream()
+                    .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()) || "Ongoing".equalsIgnoreCase(r.getStatus()))
+                    .toList();
+
+            Map<String, User> userMap = userRepository.findAll().stream()
+                    .filter(u -> u.getId() != null)
+                    .collect(Collectors.toMap(u -> Objects.requireNonNull(u.getId()), u -> u, (a, b) -> a));
+
+            Map<String, Bike> bikeMap = allBikes.stream()
+                    .filter(b -> b.getId() != null)
+                    .collect(Collectors.toMap(b -> Objects.requireNonNull(b.getId()), b -> b, (a, b) -> a));
 
             double totalEarnings = allRentals.stream()
                     .filter(r -> !"ACTIVE".equalsIgnoreCase(r.getStatus()) && !"Ongoing".equalsIgnoreCase(r.getStatus()))
-                    .mapToDouble(r -> {
-                        Bike b = bikeRepository.findById(r.getBikeId()).orElse(null);
-                        return (b != null && b.getRatePerHour() > 0) ? b.getRatePerHour() : 150.0;
-                    })
+                    .mapToDouble(r -> computeRentalRevenue(r, bikeMap))
                     .sum();
 
-            model.addAttribute("totalBikes", bikeRepository.count());
-            model.addAttribute("activeRentals", activeCount);
+            model.addAttribute("totalBikes", allBikes.size());
+            model.addAttribute("availableBikesCount", availableCount);
+            model.addAttribute("rentedBikesCount", rentedCount);
+            model.addAttribute("maintenanceBikesCount", maintenanceCount);
+            model.addAttribute("activeRentals", activeRentalsList.size());
+            model.addAttribute("activeRentalsList", activeRentalsList);
+            model.addAttribute("userMap", userMap);
             model.addAttribute("totalUsers", userRepository.count());
             model.addAttribute("totalEarnings", totalEarnings);
             model.addAttribute("recentRentals", allRentals.stream().limit(5).toList());
@@ -149,7 +185,7 @@ public class MainController {
         }
     }
 
-    // Rent Bike (Works for both Customer & Admin)
+    // Rent Bike (Enforces One-Bike-Per-User Safeguard, Atomic Locking & Billing)
     @PostMapping("/rent-bike")
     public String processRental(@RequestParam("bikeId") String bikeId,
                                 @RequestParam(value = "userId", required = false) String userId,
@@ -168,63 +204,100 @@ public class MainController {
                 if (currentUser != null) targetUserId = currentUser.getId();
             }
 
-            if (targetUserId != null) {
-                rentalService.processBikeRental(bikeId, targetUserId);
-                redirectAttributes.addFlashAttribute("message",
-                        "Booked " + bikeId + " for " + hours + " hr(s) via " + paymentMethod + "!");
-            } else {
+            if (targetUserId == null) {
                 redirectAttributes.addFlashAttribute("message", "Error: User not found.");
+                return "redirect:/";
             }
+
+            final String finalUserId = targetUserId;
+            boolean hasUnreturnedBike = rentalRepository.findAll().stream()
+                    .anyMatch(r -> finalUserId.equals(r.getUserId())
+                            && ("ACTIVE".equalsIgnoreCase(r.getStatus()) || "Ongoing".equalsIgnoreCase(r.getStatus())));
+
+            if (hasUnreturnedBike) {
+                redirectAttributes.addFlashAttribute("message",
+                        "Rental blocked: You already have an active unreturned bicycle. Please return it first.");
+                return "redirect:/";
+            }
+
+            Rental booked = rentalService.processBikeRental(bikeId, targetUserId, hours, paymentMethod);
+
+            redirectAttributes.addFlashAttribute("message",
+                    String.format("Booked %s for %d hr(s) via %s (₱%.2f)!",
+                            bikeId, hours, paymentMethod, booked.getTotalPaid()));
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("message", "Could not complete rental: " + e.getMessage());
         }
         return "redirect:/";
     }
 
-    // Pay & Return Bike (Works smoothly for BOTH Customer and Admin)
+    // Pay & Return Bike (Automatically calculates overdue late fees)
     @PostMapping("/pay-return")
     public String payAndReturnBike(@RequestParam("rentalId") String rentalId,
                                    Authentication authentication,
                                    RedirectAttributes redirectAttributes) {
-        Rental rental = rentalRepository.findById(rentalId).orElse(null);
-        if (rental != null && ("ACTIVE".equalsIgnoreCase(rental.getStatus()) || "Ongoing".equalsIgnoreCase(rental.getStatus()))) {
-            rental.setStatus("PAID & COMPLETED");
-            rentalRepository.save(rental);
-
-            Bike bike = bikeRepository.findById(rental.getBikeId()).orElse(null);
-            if (bike != null) {
-                bike.setStatus("Available");
-                bikeRepository.save(bike);
+        try {
+            Rental settled = rentalService.settleAndReturnBike(rentalId);
+            if (settled.getLateFee() > 0) {
+                redirectAttributes.addFlashAttribute("message",
+                        String.format("Settled %s! Base: ₱%.2f + Overdue Late Fee: ₱%.2f = Total: ₱%.2f.",
+                                settled.getBikeId(), settled.getBaseAmount(), settled.getLateFee(), settled.getTotalPaid()));
+            } else {
+                redirectAttributes.addFlashAttribute("message",
+                        String.format("On-time return settled! Bike %s returned (Total: ₱%.2f).",
+                                settled.getBikeId(), settled.getTotalPaid()));
             }
-            redirectAttributes.addFlashAttribute("message",
-                    "Payment settled! Bike " + rental.getBikeId() + " has been returned.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("message", "Return error: " + e.getMessage());
         }
 
         boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().toUpperCase().contains("ADMIN"));
 
-        return isAdmin ? "redirect:/transactions" : "redirect:/";
+        return isAdmin ? "redirect:/dashboard" : "redirect:/";
     }
 
-    // Extend Active Rental (+1 Hour)
+    // Extend Active Rental (+1 Hour & Updates Base Billing)
     @PostMapping("/extend-rental")
     public String extendRental(@RequestParam("rentalId") String rentalId,
                                RedirectAttributes redirectAttributes) {
         Rental rental = rentalRepository.findById(rentalId).orElse(null);
         if (rental != null) {
+            Bike bike = bikeRepository.findById(rental.getBikeId()).orElse(null);
+            double rate = (bike != null && bike.getRatePerHour() > 0) ? bike.getRatePerHour() : 150.0;
+
+            LocalDateTime base = (rental.getDueTime() != null) ? rental.getDueTime() : LocalDateTime.now();
+            rental.setDueTime(base.plusHours(1));
+            rental.setBookedHours(Math.max(1, rental.getBookedHours()) + 1);
+            rental.setBaseAmount(rental.getBookedHours() * rate);
+            rental.setTotalPaid(rental.getBaseAmount());
+            rentalRepository.save(rental);
+
             redirectAttributes.addFlashAttribute("message",
-                    "Rental " + rentalId + " extended by +1 hour!");
+                    String.format("Rental %s extended by +1 hour (+₱%.2f)!", rentalId, rate));
         }
         return "redirect:/";
     }
 
-    // Report Bike Maintenance Issue
+    // Report Bike Maintenance Issue (Flags docked bikes to Maintenance in MongoDB)
     @PostMapping("/report-issue")
-    public String reportIssue(@RequestParam("bikeId") String bikeId,
+    public String reportIssue(@RequestParam(value = "bikeId", required = false) String bikeId,
                               @RequestParam("issueNote") String issueNote,
                               RedirectAttributes redirectAttributes) {
+        if (bikeId != null && !bikeId.isBlank()) {
+            Bike bike = bikeRepository.findById(bikeId.trim().toUpperCase()).orElse(null);
+            if (bike != null) {
+                if ("Available".equalsIgnoreCase(bike.getStatus())) {
+                    bike.setStatus("Maintenance");
+                    bikeRepository.save(bike);
+                }
+                redirectAttributes.addFlashAttribute("message",
+                        "Issue logged for " + bike.getId() + " (\"" + issueNote + "\"). Fleet status updated.");
+                return "redirect:/";
+            }
+        }
         redirectAttributes.addFlashAttribute("message",
-                "Issue reported for " + bikeId + ": \"" + issueNote + "\". Our mechanics have been notified.");
+                "Maintenance report logged: \"" + issueNote + "\". Our mechanics have been notified.");
         return "redirect:/";
     }
 
@@ -277,8 +350,16 @@ public class MainController {
                            @RequestParam("ratePerHour") double ratePerHour,
                            @RequestParam(value = "status", defaultValue = "Available") String status,
                            RedirectAttributes redirectAttributes) {
-        String bikeId = (id != null && !id.isBlank()) ? id : "BIK" + (100 + bikeRepository.count() + 1);
-        Bike bike = new Bike(bikeId, bikeModel, category, ratePerHour, status);
+        String bikeId = (id != null && !id.isBlank())
+                ? id
+                : "BIK2026" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        Bike bike = (id != null && !id.isBlank())
+                ? bikeRepository.findById(id).orElse(new Bike(bikeId, bikeModel, category, ratePerHour, status))
+                : new Bike(bikeId, bikeModel, category, ratePerHour, status);
+        bike.setModel(bikeModel);
+        bike.setCategory(category);
+        bike.setRatePerHour(ratePerHour);
+        bike.setStatus(status);
         bikeRepository.save(bike);
         redirectAttributes.addFlashAttribute("message", "Bicycle " + bikeId + " saved!");
         return "redirect:/bicycles";
@@ -306,7 +387,23 @@ public class MainController {
 
     @GetMapping("/transactions")
     public String transactionsPage(Model model) {
-        model.addAttribute("rentals", rentalRepository.findAll());
+        List<Rental> allRentals = rentalService.getAllJoinedRentals();
+        Map<String, User> userMap = userRepository.findAll().stream()
+                .filter(u -> u.getId() != null)
+                .collect(Collectors.toMap(u -> Objects.requireNonNull(u.getId()), u -> u, (a, b) -> a));
+        Map<String, Bike> bikeMap = bikeRepository.findAll().stream()
+                .filter(b -> b.getId() != null)
+                .collect(Collectors.toMap(b -> Objects.requireNonNull(b.getId()), b -> b, (a, b) -> a));
+
+        double totalRevenue = allRentals.stream()
+                .filter(r -> !"ACTIVE".equalsIgnoreCase(r.getStatus()) && !"Ongoing".equalsIgnoreCase(r.getStatus()))
+                .mapToDouble(r -> computeRentalRevenue(r, bikeMap))
+                .sum();
+
+        model.addAttribute("rentals", allRentals);
+        model.addAttribute("userMap", userMap);
+        model.addAttribute("bikeMap", bikeMap);
+        model.addAttribute("totalRevenue", totalRevenue);
         return "transactions";
     }
 

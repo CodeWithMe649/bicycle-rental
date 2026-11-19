@@ -1,93 +1,386 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: main-layout(~{::section}, 'dashboard')}">
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main-layout(~{::content}, 'dashboard')}">
 <body>
-<section>
-    <!-- Flash Message Alert -->
-    <div th:if="${message}" class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center justify-between">
-        <span th:text="${message}">Success!</span>
+<div th:fragment="content" class="max-w-[1440px] mx-auto space-y-5">
+
+    <!-- Flash Notification -->
+    <div th:if="${message}"
+         class="bg-zinc-900 text-white border-l-4 border-emerald-400 px-4 py-3 rounded-r-lg text-xs font-medium flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span th:text="${message}">Action completed!</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-zinc-400 hover:text-white text-base leading-none">&times;</button>
     </div>
 
-    <!-- Header -->
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <p class="text-gray-500">Welcome back, <span th:text="${username}">Christian</span>! 👋</p>
-    </div>
+    <!-- Top POS Command & Telemetry Bar -->
+    <div class="bg-zinc-900 text-white rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-zinc-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-amber-400 font-mono font-bold text-sm">
+                    HQ
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base font-bold tracking-tight text-white">Dispatch &amp; Return Terminal</h1>
+                        <span class="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded">
+                            Online
+                        </span>
+                    </div>
+                    <p class="text-xs text-zinc-400 mt-0.5">
+                        Operator: <span class="text-zinc-200 font-medium" th:text="${username != null ? username : 'Christian'}">Christian</span>
+                        &bull; <span id="liveClock" class="font-mono text-zinc-300">--:--:--</span>
+                    </p>
+                </div>
+            </div>
 
-    <!-- Stat Metric Cards (All Clickable) -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <a th:href="@{/bicycles}" class="bg-blue-100 border border-blue-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
-            <div class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bike"></i></div>
-            <div>
-                <p class="text-xs text-gray-500 font-semibold uppercase">Total Bikes</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalBikes}">0</h3>
-            </div>
-        </a>
-        <a th:href="@{/transactions}" class="bg-emerald-100 border border-emerald-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
-            <div class="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="calendar"></i></div>
-            <div>
-                <p class="text-xs text-gray-500 font-semibold uppercase">Active Rentals</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="${activeRentals}">0</h3>
-            </div>
-        </a>
-        <a th:href="@{/users}" class="bg-orange-100 border border-orange-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
-            <div class="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center"><i data-lucide="users"></i></div>
-            <div>
-                <p class="text-xs text-gray-500 font-semibold uppercase">Total Users</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="${totalUsers}">0</h3>
-            </div>
-        </a>
-        <a th:href="@{/transactions}" class="bg-indigo-100 border border-indigo-200 p-5 rounded-2xl flex items-center gap-4 hover:shadow-md transition">
-            <div class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center"><i data-lucide="bar-chart-3"></i></div>
-            <div>
-                <p class="text-xs text-gray-500 font-semibold uppercase">Total Earnings</p>
-                <h3 class="text-2xl font-bold text-gray-800" th:text="'₱' + ${#numbers.formatDecimal(totalEarnings != null ? totalEarnings : 0, 1, 'COMMA', 2, 'POINT')}">₱0.00</h3>
-            </div>
-        </a>
-    </div>
-
-    <!-- Main Banner & Recent Activity Split -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Hero Card -->
-        <div class="lg:col-span-2 bg-gradient-to-r from-blue-700 to-indigo-900 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[260px]">
-            <div>
-                <h2 class="text-3xl font-extrabold mb-2">Bicycle Rental<br>Management System</h2>
-                <p class="text-blue-200 text-sm">Rent a bike. Enjoy the ride!</p>
-            </div>
-            <div class="flex gap-3">
-                <a th:href="@{/rentals}" class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition">
-                    New Rental <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <div class="flex flex-wrap items-center gap-2.5">
+                <a th:href="@{/bicycles}"
+                   class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition flex items-center gap-2">
+                    <i data-lucide="wrench" class="w-3.5 h-3.5 text-zinc-400"></i>
+                    <span>Fleet Inventory</span>
                 </a>
-                <a th:href="@{/bicycles}" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition">
-                    Manage Fleet
+                <a th:href="@{/rentals}"
+                   class="bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
+                    <span>Dispatch Walk-In</span>
                 </a>
             </div>
         </div>
 
-        <!-- Recent Rentals Card -->
-        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-gray-800">Recent Rentals</h3>
-                <a th:href="@{/transactions}" class="text-xs text-blue-600 font-semibold hover:underline">View All →</a>
+        <!-- Unified 4-Metric Telemetry Strip -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800 pt-4">
+            <div class="py-2 lg:py-0 lg:pr-6">
+                <p class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Fleet Ready</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-2xl font-bold font-mono text-white" th:text="${availableBikesCount}">99</span>
+                    <span class="text-xs text-zinc-500 font-mono">/ <span th:text="${totalBikes}">105</span> total</span>
+                </div>
             </div>
-            <div th:if="${#lists.isEmpty(recentRentals)}" class="text-sm text-gray-400 py-6 text-center">
-                No rentals found.
+
+            <div class="py-2 lg:py-0 lg:px-6">
+                <p class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Bikes On Road</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-2xl font-bold font-mono text-amber-400" th:text="${activeRentals}">0</span>
+                    <span class="text-xs text-zinc-500 font-mono" th:text="'(' + ${maintenanceBikesCount} + ' in repair)'">(0 in repair)</span>
+                </div>
             </div>
-            <div class="space-y-4">
-                <div th:each="r : ${recentRentals}" class="flex items-center justify-between pb-3 border-b border-gray-100 last:border-none">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-gray-100 rounded-lg"><i data-lucide="bike" class="w-5 h-5 text-gray-600"></i></div>
-                        <div>
-                            <p class="text-sm font-semibold text-gray-800" th:text="${r.bikeId}">BIK001</p>
-                            <p class="text-xs text-gray-400" th:text="${r.startTime != null ? #temporals.format(r.startTime, 'MMM dd, yyyy') : 'Recent'}">Nov 14, 2026</p>
-                        </div>
-                    </div>
-                    <span th:text="${r.status}"
-                          th:classappend="${r.status == 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}"
-                          class="px-3 py-1 text-xs font-bold rounded-full">ACTIVE</span>
+
+            <div class="py-2 lg:py-0 lg:px-6">
+                <p class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Verified Riders</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-2xl font-bold font-mono text-white" th:text="${totalUsers}">105</span>
+                    <span class="text-xs text-zinc-500 font-mono">accounts</span>
+                </div>
+            </div>
+
+            <div class="py-2 lg:py-0 lg:pl-6">
+                <p class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Gross Revenue</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-2xl font-bold font-mono text-emerald-400"
+                          th:text="'₱' + ${#numbers.formatDecimal(totalEarnings, 1, 'COMMA', 2, 'POINT')}">₱33,210.00</span>
                 </div>
             </div>
         </div>
     </div>
-</section>
+
+    <!-- Main Split Workspace: Left 8 Cols (Active Dispatch Queue) | Right 4 Cols (Fleet Meter + Recent Log) -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+
+        <!-- LEFT: Active Dispatch & Return Queue (8 Columns) -->
+        <div class="xl:col-span-8 bg-white border border-stone-200 rounded-xl shadow-xs overflow-hidden">
+
+            <!-- Toolbar with Instant Search & Filter Tabs -->
+            <div class="p-4 bg-stone-50 border-b border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-sm font-bold text-zinc-900">Active Dispatch Queue</h2>
+                    <span class="px-2 py-0.5 text-[11px] font-mono font-bold bg-zinc-900 text-white rounded"
+                          th:text="${activeRentals}">0</span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input type="text" id="dispatchSearch" onkeyup="filterDispatchRows()"
+                               placeholder="Filter bike or rider..."
+                               class="bg-white border border-stone-300 rounded-lg pl-3 pr-7 py-1.5 text-xs text-zinc-800 placeholder:text-stone-400 focus:outline-none focus:border-zinc-900 w-44 sm:w-52">
+                    </div>
+
+                    <!-- Filter Pills -->
+                    <div class="inline-flex rounded-lg bg-stone-200/70 p-0.5 text-[11px] font-semibold">
+                        <button type="button" onclick="setDispatchFilter('ALL', this)"
+                                class="filter-tab px-2.5 py-1 rounded-md bg-white text-zinc-900 shadow-2xs">All</button>
+                        <button type="button" onclick="setDispatchFilter('OVERDUE', this)"
+                                class="filter-tab px-2.5 py-1 rounded-md text-stone-600 hover:text-zinc-900">Overdue</button>
+                        <button type="button" onclick="setDispatchFilter('ONTIME', this)"
+                                class="filter-tab px-2.5 py-1 rounded-md text-stone-600 hover:text-zinc-900">On Time</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(activeRentalsList)}"
+                 class="py-16 px-6 text-center bg-white">
+                <div class="w-11 h-11 rounded-lg bg-stone-100 border border-stone-200 text-stone-400 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="check" class="w-5 h-5"></i>
+                </div>
+                <p class="text-sm font-bold text-zinc-800">Bay Clear — No Active Rentals</p>
+                <p class="text-xs text-stone-500 mt-1 max-w-xs mx-auto">All bicycles are currently accounted for in the station dock.</p>
+            </div>
+
+            <!-- Structured Dispatch Cards (Replaces Traditional Table) -->
+            <div th:if="${!#lists.isEmpty(activeRentalsList)}" id="dispatchList" class="divide-y divide-stone-200">
+                <div th:each="r : ${activeRentalsList}"
+                     th:id="'admin-row-' + ${r.id}"
+                     th:with="borrower=${userMap[r.userId]}"
+                     th:attr="data-search=${r.bikeId + ' ' + r.id + ' ' + (borrower != null ? borrower.name : r.userId)}, data-state=${r.overdue ? 'OVERDUE' : 'ONTIME'}"
+                     th:classappend="${r.overdue} ? 'border-l-4 border-l-rose-600 bg-rose-50/30' : 'border-l-4 border-l-emerald-500 hover:bg-stone-50/80'"
+                     class="dispatch-item p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition">
+
+                    <!-- Left: Bike Tag + Borrower Details -->
+                    <div class="flex items-start gap-3.5">
+                        <div class="px-2.5 py-2 rounded-lg bg-zinc-900 text-white font-mono text-xs font-bold tracking-tight shrink-0">
+                            <span th:text="${r.bikeId}">BIK101</span>
+                        </div>
+
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-bold text-zinc-900"
+                                      th:text="${borrower != null ? borrower.name : r.userId}">Customer Name</span>
+                                <span class="text-[11px] font-mono text-stone-400" th:text="'#' + ${r.id}">#RNT001</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 mt-1">
+                                <span class="inline-flex items-center gap-1">
+                                    <i data-lucide="phone" class="w-3 h-3 text-stone-400"></i>
+                                    <span th:text="${borrower != null && borrower.phoneNumber != null ? borrower.phoneNumber : 'No Phone'}">0917-000-0000</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1">
+                                    <i data-lucide="id-card" class="w-3 h-3 text-stone-400"></i>
+                                    ID: <strong class="font-medium text-zinc-700"
+                                                th:text="${borrower != null && borrower.validIdNumber != null ? borrower.validIdNumber : 'On File'}">ID-12345</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Digital Countdown Module + Return Action -->
+                    <div class="flex flex-wrap items-center justify-between md:justify-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-stone-100">
+
+                        <!-- Digital Timer Readout -->
+                        <div class="admin-countdown bg-stone-100 border border-stone-200 px-3 py-1.5 rounded-lg text-left md:text-right min-w-[148px]"
+                             th:attr="data-rental-id=${r.id}, data-due=${r.effectiveDueTime != null ? r.effectiveDueTime : ''}">
+                            <div class="flex items-center md:justify-end gap-1.5">
+                                <span th:id="'admin-status-' + ${r.id}"
+                                      th:text="${r.overdue} ? 'OVERDUE' : 'ON TIME'"
+                                      th:classappend="${r.overdue} ? 'text-rose-600' : 'text-emerald-600'"
+                                      class="text-[10px] font-mono font-extrabold uppercase tracking-wider">ON TIME</span>
+                                <span class="text-stone-300">&bull;</span>
+                                <span class="text-[10px] font-mono uppercase text-stone-500 timer-label">LEFT</span>
+                            </div>
+                            <div class="text-sm font-extrabold font-mono text-zinc-900 tabular-nums timer-value">
+                                Calculating...
+                            </div>
+                            <div class="text-[10px] font-mono text-stone-400"
+                                 th:text="'Due ' + (${r.effectiveDueTime != null ? #temporals.format(r.effectiveDueTime, 'MMM dd, hh:mm a') : '1 hr'})">
+                                Due Nov 16, 12:02 AM
+                            </div>
+                        </div>
+
+                        <!-- Settle Action -->
+                        <form th:action="@{/pay-return}" method="post" class="inline">
+                            <input type="hidden" name="rentalId" th:value="${r.id}">
+                            <button type="submit"
+                                    class="bg-zinc-900 hover:bg-emerald-600 text-white text-xs font-bold px-3.5 py-2.5 rounded-lg transition cursor-pointer">
+                                Settle &amp; Return
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Fleet Breakdown & Recent Receipts (4 Columns) -->
+        <div class="xl:col-span-4 space-y-5">
+
+            <!-- Fleet Capacity Gauge -->
+            <div class="bg-white border border-stone-200 rounded-xl p-5 shadow-xs">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-500">Fleet Allocation</h3>
+                    <span class="text-xs font-mono font-bold text-zinc-900"
+                          th:text="${totalBikes > 0 ? #numbers.formatDecimal((rentedBikesCount * 100.0 / totalBikes), 1, 0) + '% Active' : '0% Active'}">5% Active</span>
+                </div>
+
+                <!-- Segmented Bar -->
+                <div class="w-full h-2.5 bg-stone-100 rounded-sm overflow-hidden flex gap-0.5 mb-4" th:if="${totalBikes > 0}">
+                    <div class="bg-emerald-500 h-full"
+                         th:style="'width:' + (${availableBikesCount} * 100.0 / ${totalBikes}) + '%'"></div>
+                    <div class="bg-amber-400 h-full"
+                         th:style="'width:' + (${rentedBikesCount} * 100.0 / ${totalBikes}) + '%'"></div>
+                    <div class="bg-rose-500 h-full"
+                         th:style="'width:' + (${maintenanceBikesCount} * 100.0 / ${totalBikes}) + '%'"></div>
+                </div>
+
+                <div class="space-y-2 text-xs">
+                    <div class="flex items-center justify-between py-1 border-b border-stone-100">
+                        <span class="flex items-center gap-2 text-stone-600">
+                            <span class="w-2 h-2 rounded-xs bg-emerald-500"></span> Available in Dock
+                        </span>
+                        <span class="font-mono font-bold text-zinc-900" th:text="${availableBikesCount}">99</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1 border-b border-stone-100">
+                        <span class="flex items-center gap-2 text-stone-600">
+                            <span class="w-2 h-2 rounded-xs bg-amber-400"></span> Currently Rented
+                        </span>
+                        <span class="font-mono font-bold text-zinc-900" th:text="${rentedBikesCount}">5</span>
+                    </div>
+                    <div class="flex items-center justify-between py-1">
+                        <span class="flex items-center gap-2 text-stone-600">
+                            <span class="w-2 h-2 rounded-xs bg-rose-500"></span> Under Maintenance
+                        </span>
+                        <span class="font-mono font-bold text-zinc-900" th:text="${maintenanceBikesCount}">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compact Transaction Ledger -->
+            <div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-xs">
+                <div class="px-5 py-3.5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-600">Recent Ledger</h3>
+                    <a th:href="@{/transactions}" class="text-xs font-semibold text-zinc-900 hover:underline">All Logs &rarr;</a>
+                </div>
+
+                <div class="divide-y divide-stone-100">
+                    <div th:each="r : ${recentRentals}"
+                         class="px-5 py-3 flex items-center justify-between hover:bg-stone-50 transition">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs font-bold text-zinc-900" th:text="${r.bikeId}">BIK20260002</span>
+                                <span class="text-[11px] font-mono text-stone-400" th:text="${r.id}">RNT001</span>
+                            </div>
+                            <a th:href="@{'/receipt/' + ${r.id}}"
+                               class="text-[11px] font-medium text-amber-700 hover:text-amber-900 hover:underline">
+                                Open Receipt &nearr;
+                            </a>
+                        </div>
+
+                        <span th:classappend="${r.status == 'ACTIVE' || r.status == 'Ongoing'} ? 'bg-amber-100 text-amber-900' : 'bg-stone-100 text-stone-700'"
+                              class="text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase"
+                              th:text="${r.status}">COMPLETED</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Live Clock, Countdown & Instant Queue Filter Script -->
+    <script>
+        let currentStatusFilter = 'ALL';
+
+        function updateLiveClock() {
+            const clockEl = document.getElementById('liveClock');
+            if (clockEl) {
+                const now = new Date();
+                clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+        }
+
+        function setDispatchFilter(status, btn) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.className = 'filter-tab px-2.5 py-1 rounded-md text-stone-600 hover:text-zinc-900';
+            });
+            btn.className = 'filter-tab px-2.5 py-1 rounded-md bg-white text-zinc-900 shadow-2xs';
+            filterDispatchRows();
+        }
+
+        function filterDispatchRows() {
+            const query = (document.getElementById('dispatchSearch')?.value || '').toLowerCase().trim();
+            document.querySelectorAll('.dispatch-item').forEach(item => {
+                const text = (item.getAttribute('data-search') || '').toLowerCase();
+                const state = item.getAttribute('data-state') || 'ONTIME';
+                const matchesSearch = !query || text.includes(query);
+                const matchesFilter = currentStatusFilter === 'ALL' || state === currentStatusFilter;
+                item.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+            });
+        }
+
+        function updateAdminTimers() {
+            const now = new Date().getTime();
+            const boxes = document.querySelectorAll('.admin-countdown');
+
+            boxes.forEach(box => {
+                const dueStr = box.getAttribute('data-due');
+                const rentalId = box.getAttribute('data-rental-id');
+                if (!dueStr) return;
+
+                const dueTime = new Date(dueStr).getTime();
+                const diff = dueTime - now;
+
+                const valueEl = box.querySelector('.timer-value');
+                const labelEl = box.querySelector('.timer-label');
+                const statusBadge = document.getElementById('admin-status-' + rentalId);
+                const rowEl = document.getElementById('admin-row-' + rentalId);
+
+                if (diff > 0) {
+                    const hrs = Math.floor(diff / (1000 * 60 * 60));
+                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    const h = String(hrs).padStart(2, '0');
+                    const m = String(mins).padStart(2, '0');
+                    const s = String(secs).padStart(2, '0');
+
+                    labelEl.textContent = 'LEFT';
+                    valueEl.textContent = `${h}h ${m}m ${s}s`;
+                    valueEl.className = 'text-sm font-extrabold font-mono text-zinc-900 tabular-nums timer-value';
+
+                    if (statusBadge) {
+                        statusBadge.textContent = diff <= 15 * 60 * 1000 ? 'DUE SOON' : 'ON TIME';
+                        statusBadge.className = diff <= 15 * 60 * 1000
+                            ? 'text-[10px] font-mono font-extrabold uppercase tracking-wider text-amber-600'
+                            : 'text-[10px] font-mono font-extrabold uppercase tracking-wider text-emerald-600';
+                    }
+                    if (rowEl) {
+                        rowEl.setAttribute('data-state', 'ONTIME');
+                    }
+                } else {
+                    const overdueDiff = Math.abs(diff);
+                    const hrs = Math.floor(overdueDiff / (1000 * 60 * 60));
+                    const mins = Math.floor((overdueDiff % (1000 * 60 * 60)) / (1000 * 60));
+                    const secs = Math.floor((overdueDiff % (1000 * 60)) / 1000);
+
+                    const h = String(hrs).padStart(2, '0');
+                    const m = String(mins).padStart(2, '0');
+                    const s = String(secs).padStart(2, '0');
+
+                    labelEl.textContent = 'LATE BY';
+                    valueEl.textContent = `${h}h ${m}m ${s}s`;
+                    valueEl.className = 'text-sm font-extrabold font-mono text-rose-600 tabular-nums timer-value';
+                    box.className = 'admin-countdown bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg text-left md:text-right min-w-[148px]';
+
+                    if (statusBadge) {
+                        statusBadge.textContent = 'OVERDUE';
+                        statusBadge.className = 'text-[10px] font-mono font-extrabold uppercase tracking-wider text-rose-600 animate-pulse';
+                    }
+                    if (rowEl) {
+                        rowEl.setAttribute('data-state', 'OVERDUE');
+                        rowEl.classList.remove('border-l-emerald-500');
+                        rowEl.classList.add('border-l-rose-600', 'bg-rose-50/30');
+                    }
+                }
+            });
+        }
+
+        updateLiveClock();
+        updateAdminTimers();
+        setInterval(() => {
+            updateLiveClock();
+            updateAdminTimers();
+        }, 1000);
+    </script>
+</div>
 </body>
 </html>

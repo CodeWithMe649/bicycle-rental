@@ -6,7 +6,7 @@
         <!-- Back & Print Buttons -->
         <div class="flex justify-between items-center mb-6">
             <a th:href="@{/}" class="text-sm font-semibold text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                ← Back to Dashboard
+                &larr; Back to Dashboard
             </a>
             <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
                 Print Receipt
@@ -20,7 +20,7 @@
                     🚲
                 </div>
                 <h2 class="text-2xl font-extrabold text-gray-900">BikeRent Official Receipt</h2>
-                <p class="text-xs text-gray-400 mt-1">Davao Main Bike Station • Official Transaction Record</p>
+                <p class="text-xs text-gray-400 mt-1">Davao Main Bike Station &bull; Official Transaction Record</p>
             </div>
 
             <!-- Joined Details (Rental + User + Bike) -->
@@ -30,9 +30,14 @@
                     <span class="font-mono font-bold text-gray-900" th:text="${rental.id}">RNT20260001</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-400">Date & Time</span>
+                    <span class="text-gray-400">Rent Start Time</span>
                     <span class="font-semibold text-gray-800"
-                          th:text="${rental.startTime != null ? #temporals.format(rental.startTime, 'MMM dd, yyyy HH:mm') : 'Nov 14, 2026'}">Nov 14, 2026</span>
+                          th:text="${rental.rentTime != null ? #temporals.format(rental.rentTime, 'MMM dd, yyyy hh:mm a') : 'N/A'}">Nov 15, 2026</span>
+                </div>
+                <div class="flex justify-between" th:if="${rental.dueTime != null}">
+                    <span class="text-gray-400">Scheduled Due Time</span>
+                    <span class="font-semibold text-gray-800"
+                          th:text="${#temporals.format(rental.dueTime, 'MMM dd, yyyy hh:mm a')}">Nov 15, 2026</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-400">Customer</span>
@@ -51,7 +56,7 @@
                 <div class="flex justify-between">
                     <span class="text-gray-400">Status</span>
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700"
-                          th:text="${rental.status}">PAID & COMPLETED</span>
+                          th:text="${rental.status}">PAID &amp; COMPLETED</span>
                 </div>
             </div>
 

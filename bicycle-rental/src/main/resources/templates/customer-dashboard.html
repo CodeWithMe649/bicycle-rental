@@ -3,471 +3,574 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Dashboard - BikeRent</title>
+    <title>Rider Portal — BikeRent</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 md:p-8 text-gray-800">
+<body class="bg-stone-200/80 text-zinc-900 min-h-screen antialiased">
 
-    <div class="max-w-6xl mx-auto space-y-6">
-
-        <!-- Top Navbar -->
-        <header class="bg-white rounded-2xl p-4 px-6 shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
+    <!-- Sticky Dark Navigation Bar with Bike Icon -->
+    <header class="sticky top-0 z-40 bg-zinc-950 text-white border-b border-zinc-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+            <!-- Brand -->
             <div class="flex items-center gap-3">
-                <div class="p-2.5 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-500/20">
-                    <i data-lucide="bike" class="w-6 h-6"></i>
+                <div class="w-8 h-8 rounded-lg bg-amber-400 text-zinc-950 flex items-center justify-center shrink-0">
+                    <i data-lucide="bike" class="w-4 h-4 stroke-[2.5]"></i>
                 </div>
-                <div>
-                    <h1 class="font-bold text-gray-900 text-lg leading-none">BikeRent</h1>
-                    <p class="text-xs text-gray-400 mt-0.5">Client Portal</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="font-bold text-sm tracking-tight text-white">BikeRent</span>
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 hidden sm:inline">Rider Pass</span>
                 </div>
             </div>
 
-            <!-- Navigation Tabs -->
-            <nav class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
-                <a href="#browse" class="px-3.5 py-2 rounded-lg bg-white text-blue-600 shadow-sm">Browse Bikes</a>
-                <a href="#active-rentals" class="px-3.5 py-2 rounded-lg text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
-                    Active Rentals
-                    <span th:if="${activeCount != null and activeCount > 0}" th:text="${activeCount}"
-                          class="bg-amber-500 text-white text-[10px] px-1.5 py-0.2 rounded-full">1</span>
-                </a>
-                <a href="#history" class="px-3.5 py-2 rounded-lg text-gray-600 hover:text-gray-900">My History</a>
+            <!-- Anchor Links -->
+            <nav class="hidden md:flex items-center gap-1 text-xs font-semibold">
+                <a href="#browse" class="px-3 py-1.5 rounded-lg text-zinc-200 hover:bg-zinc-800 transition">Fleet Catalog</a>
+                <a href="#active-section" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition">Active Ride</a>
+                <a href="#history-section" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition">Ride Log</a>
             </nav>
 
-            <!-- Profile Button & Logout -->
-            <div class="flex items-center gap-3">
-                <button type="button" onclick="openProfileModal()"
-                        class="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition cursor-pointer"
-                        title="Edit Profile">
-                    <div class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs uppercase"
-                         th:text="${username != null ? #strings.substring(username, 0, 1) : 'U'}">J</div>
-                    <span class="text-sm font-semibold text-gray-800 capitalize hidden sm:inline" th:text="${username}">John</span>
-                    <i data-lucide="settings" class="w-3.5 h-3.5 text-blue-600"></i>
+            <!-- Account & Logout -->
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="openModal('profileModal')"
+                        class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-200 transition">
+                    <span class="w-5 h-5 rounded bg-amber-400 text-zinc-950 flex items-center justify-center font-mono font-bold text-[11px] uppercase"
+                          th:text="${username != null ? #strings.substring(username, 0, 1) : 'R'}">A</span>
+                    <span th:text="${username != null ? username : 'Rider'}">alec</span>
                 </button>
 
-                <form th:action="@{/logout}" method="post">
-                    <button type="submit" 
-                            class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 px-3.5 py-2 rounded-xl font-semibold text-xs transition border border-red-100">
-                        <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                <form th:action="@{/logout}" method="post" class="inline">
+                    <button type="submit"
+                            class="bg-zinc-900 hover:bg-rose-950/70 border border-zinc-800 hover:border-rose-800 text-zinc-400 hover:text-rose-300 font-semibold text-xs px-3 py-1.5 rounded-lg transition">
+                        Sign Out
                     </button>
                 </form>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- Flash Toast Banner -->
-        <div th:if="${message}" class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-2.5 text-sm font-medium">
-                <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i>
-                <span th:text="${message}">Success!</span>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Flash Notification Banner -->
+        <div th:if="${message}"
+             class="bg-zinc-900 text-white border-l-4 border-emerald-400 px-4 py-3 rounded-r-lg text-xs font-medium flex items-center justify-between shadow-xs">
+            <div class="flex items-center gap-2.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span th:text="${message}">Notification</span>
             </div>
-            <button onclick="this.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900 text-xs font-bold">✕</button>
+            <button type="button" onclick="this.parentElement.remove()" class="text-zinc-400 hover:text-white text-base leading-none">&times;</button>
         </div>
 
-        <!-- Hero Banner with Quick Action Buttons -->
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
-            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <!-- Unified Rider Telemetry Strip -->
+        <div class="bg-zinc-900 text-white rounded-xl p-5 shadow-xs">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
                 <div>
-                    <h1 class="text-3xl font-extrabold capitalize" th:text="'Welcome Back, ' + ${username} + '!'">Welcome Back!</h1>
-                    <p class="text-blue-100 mt-2 max-w-xl text-sm">Find your perfect ride, check live availability, manage active rentals, and pay seamlessly in one click.</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono uppercase tracking-widest text-amber-400">Station Access</span>
+                        <span class="text-zinc-600">&bull;</span>
+                        <span id="riderLiveClock" class="text-[11px] font-mono text-zinc-400">--:--:--</span>
+                    </div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white mt-0.5">
+                        Rider Dashboard &mdash; <span class="text-amber-400" th:text="${username != null ? username : 'Rider'}">alec</span>
+                    </h1>
                 </div>
-                <div class="flex flex-wrap gap-3">
-                    <a href="#browse" class="bg-white text-blue-700 hover:bg-blue-50 px-5 py-3 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-2">
-                        <i data-lucide="compass" class="w-4 h-4"></i> Explore Fleet
-                    </a>
-                    <button type="button" onclick="openIssueModal('General')"
-                            class="bg-white/15 hover:bg-white/25 text-white border border-white/25 px-4 py-3 rounded-xl font-semibold text-xs transition flex items-center gap-2">
-                        <i data-lucide="life-buoy" class="w-4 h-4"></i> Support / Report
+
+                <div class="flex items-center gap-2.5">
+                    <button type="button" onclick="openModal('reportModal')"
+                            class="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+                        Report Issue
                     </button>
+                    <a href="#browse"
+                       class="bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-xs px-4 py-2 rounded-lg transition">
+                        Book a Bike &darr;
+                    </a>
                 </div>
             </div>
-            <div class="absolute right-6 -bottom-6 opacity-15 pointer-events-none">
-                <i data-lucide="bike" class="w-64 h-64"></i>
+
+            <!-- 3 Unified Metrics -->
+            <div class="grid grid-cols-3 divide-x divide-zinc-800 pt-4">
+                <div class="pr-4">
+                    <p class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-zinc-400">Active Rides</p>
+                    <p class="text-xl sm:text-2xl font-bold font-mono text-amber-400 mt-0.5"
+                       th:text="${activeCount != null ? activeCount : 0}">0</p>
+                </div>
+                <div class="px-4">
+                    <p class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-zinc-400">Completed Trips</p>
+                    <p class="text-xl sm:text-2xl font-bold font-mono text-emerald-400 mt-0.5"
+                       th:text="${completedCount != null ? completedCount : 0}">0</p>
+                </div>
+                <div class="pl-4">
+                    <p class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-zinc-400">Dock Available</p>
+                    <p class="text-xl sm:text-2xl font-bold font-mono text-white mt-0.5"
+                       th:text="${availableFleetCount != null ? availableFleetCount : 0}">0</p>
+                </div>
             </div>
         </div>
 
-        <!-- QUICK STATS STRIP -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl p-4 px-5 border border-gray-100 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-400 font-medium">Active Rides</p>
-                    <p class="text-2xl font-extrabold text-amber-600 mt-0.5" th:text="${activeCount != null ? activeCount : 0}">0</p>
+        <!-- Active Ride Pass with Live Countdown -->
+        <section id="active-section" th:if="${activeRentals != null && !#lists.isEmpty(activeRentals)}"
+                 class="bg-stone-100 border border-stone-300/80 rounded-xl overflow-hidden shadow-xs">
+            <div class="px-5 py-3.5 bg-zinc-900 text-white border-b border-zinc-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h2 class="text-xs font-mono font-bold uppercase tracking-wider text-zinc-100">Active Ride Pass</h2>
                 </div>
-                <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i data-lucide="timer" class="w-5 h-5"></i></div>
+                <span class="text-[11px] font-mono text-zinc-400">Live Station Sync</span>
             </div>
 
-            <div class="bg-white rounded-2xl p-4 px-5 border border-gray-100 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-400 font-medium">Completed Rides</p>
-                    <p class="text-2xl font-extrabold text-emerald-600 mt-0.5" th:text="${completedCount != null ? completedCount : 0}">0</p>
-                </div>
-                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
-            </div>
+            <div class="divide-y divide-stone-200">
+                <div th:each="r : ${activeRentals}"
+                     th:id="'rental-card-' + ${r.id}"
+                     th:classappend="${r.overdue} ? 'border-l-4 border-l-rose-600 bg-rose-500/5' : 'border-l-4 border-l-emerald-500'"
+                     class="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 
-            <div class="bg-white rounded-2xl p-4 px-5 border border-gray-100 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-400 font-medium">Available Fleet</p>
-                    <p class="text-2xl font-extrabold text-blue-600 mt-0.5" th:text="${availableFleetCount != null ? availableFleetCount : 0}">103</p>
-                </div>
-                <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="bike" class="w-5 h-5"></i></div>
-            </div>
-        </div>
+                    <!-- Left: Bike Code & Timestamps -->
+                    <div class="flex items-start gap-3.5">
+                        <div class="px-3 py-2 rounded-lg bg-zinc-900 text-amber-400 font-mono text-xs font-bold shrink-0"
+                             th:text="${r.bikeId}">BIK101</div>
 
-        <!-- ACTIVE RENTALS SECTION -->
-        <div id="active-rentals" th:if="${activeRentals != null and !#lists.isEmpty(activeRentals)}" class="space-y-3">
-            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i> My Active Rentals
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div th:each="r : ${activeRentals}" class="bg-white border-2 border-amber-200 rounded-2xl p-5 shadow-sm space-y-4">
-                    <div class="flex items-start justify-between">
                         <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[11px] rounded-full uppercase">In Use</span>
-                                <span class="text-xs text-gray-400 font-mono" th:text="${r.id}">RNT20260001</span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-bold text-zinc-900" th:text="'Ref #' + ${r.id}">Ref #RNT001</span>
+                                <span th:id="'status-badge-' + ${r.id}"
+                                      th:classappend="${r.overdue} ? 'bg-rose-500/15 text-rose-700 border-rose-500/30' : 'bg-emerald-500/15 text-emerald-800 border-emerald-500/30'"
+                                      class="px-2 py-0.5 rounded border text-[10px] font-mono font-bold uppercase"
+                                      th:text="${r.overdue} ? 'OVERDUE' : 'ON TIME'">ON TIME</span>
                             </div>
-                            <h3 class="font-bold text-gray-900 text-base" th:text="'Bike ID: ' + ${r.bikeId}">Bike ID: BIK20260001</h3>
-                            <p class="text-xs text-gray-500" th:text="'Status: ' + ${r.status}">Status: ACTIVE</p>
+
+                            <p class="text-xs text-stone-600 font-mono">
+                                Out: <span class="text-zinc-800" th:text="${r.rentTime != null ? #temporals.format(r.rentTime, 'MMM dd, hh:mm a') : 'Just now'}">Nov 15, 11:02 PM</span>
+                                <span class="mx-1.5 text-stone-400">|</span>
+                                Due: <strong class="text-zinc-950" th:text="${r.effectiveDueTime != null ? #temporals.format(r.effectiveDueTime, 'MMM dd, hh:mm a') : '1 hr from start'}">Nov 16, 12:02 AM</strong>
+                            </p>
                         </div>
                     </div>
 
-                    <!-- 3 Functional Buttons for Active Rental -->
-                    <div class="pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
-                        <!-- 1. Pay & Return -->
-                        <form th:action="@{/pay-return}" method="post">
-                            <input type="hidden" name="rentalId" th:value="${r.id}" />
-                            <button type="submit" 
-                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-semibold text-xs transition shadow-sm flex items-center gap-1.5">
-                                <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Pay & Return
+                    <!-- Right: Digital Timer + Actions -->
+                    <div class="flex flex-wrap items-center gap-2.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-stone-200">
+                        <!-- Ticking Timer Module -->
+                        <div th:id="'timer-box-' + ${r.id}"
+                             class="rental-countdown bg-stone-200/80 border border-stone-300 px-3.5 py-1.5 rounded-lg text-left sm:text-right min-w-[155px]"
+                             th:attr="data-rental-id=${r.id}, data-due=${r.effectiveDueTime != null ? r.effectiveDueTime : ''}">
+                            <span class="block text-[9px] font-mono font-bold uppercase tracking-wider text-stone-500 timer-label">Time Remaining</span>
+                            <span class="text-sm font-extrabold text-zinc-900 font-mono tabular-nums timer-value">Calculating...</span>
+                        </div>
+
+                        <form th:action="@{/extend-rental}" method="post" class="inline">
+                            <input type="hidden" name="rentalId" th:value="${r.id}">
+                            <button type="submit"
+                                    class="bg-stone-200 hover:bg-stone-300 text-zinc-900 border border-stone-300 font-bold text-xs px-3.5 py-2.5 rounded-lg transition">
+                                +1 Hr Extend
                             </button>
                         </form>
 
-                        <!-- 2. Extend +1 Hour -->
-                        <form th:action="@{/extend-rental}" method="post">
-                            <input type="hidden" name="rentalId" th:value="${r.id}" />
-                            <button type="submit" 
-                                    class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3.5 py-2 rounded-xl font-semibold text-xs transition flex items-center gap-1.5">
-                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Extend +1 Hr
+                        <form th:action="@{/pay-return}" method="post" class="inline">
+                            <input type="hidden" name="rentalId" th:value="${r.id}">
+                            <button type="submit"
+                                    class="bg-zinc-900 hover:bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition">
+                                Settle &amp; Return
                             </button>
                         </form>
-
-                        <!-- 3. Report Issue -->
-                        <button type="button" th:data-bike="${r.bikeId}" onclick="openIssueModal(this.getAttribute('data-bike'))"
-                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl font-semibold text-xs transition flex items-center gap-1.5">
-                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600"></i> Report Issue
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- AVAILABLE BICYCLES CATALOG -->
-        <div id="browse" class="space-y-4">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <i data-lucide="sparkles" class="w-5 h-5 text-blue-600"></i> Available Bicycles
-                </h2>
+        <!-- Available Fleet Catalog -->
+        <section id="browse" class="space-y-4">
+            <div class="bg-zinc-900 text-white rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold text-white">Station Fleet Catalog</h2>
+                    <p class="text-xs text-zinc-400">Select an available unit to start an instant hourly rental</p>
+                </div>
 
-                <!-- Search & Category Filter Buttons -->
                 <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative">
-                        <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
-                        <input type="text" id="bikeSearch" onkeyup="filterBikes()" placeholder="Search model or ID..."
-                               class="bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:border-blue-500 w-44">
-                    </div>
+                    <input type="text" id="bikeSearch" onkeyup="filterBikes()" placeholder="Search model or ID..."
+                           class="bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400">
 
-                    <button type="button" onclick="setCategory('ALL')" class="cat-btn bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold transition">All</button>
-                    <button type="button" onclick="setCategory('Mountain')" class="cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition">Mountain</button>
-                    <button type="button" onclick="setCategory('Hybrid')" class="cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition">Hybrid</button>
-                    <button type="button" onclick="setCategory('City')" class="cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition">City</button>
+                    <div class="inline-flex rounded-lg bg-zinc-950 p-1 border border-zinc-800">
+                        <button type="button" onclick="setCategory('ALL', this)"
+                                class="cat-btn bg-amber-400 text-zinc-950 px-3 py-1 rounded-md text-xs font-bold">All</button>
+                        <button type="button" onclick="setCategory('Mountain', this)"
+                                class="cat-btn text-zinc-400 hover:text-white px-3 py-1 rounded-md text-xs font-semibold">Mountain</button>
+                        <button type="button" onclick="setCategory('Hybrid', this)"
+                                class="cat-btn text-zinc-400 hover:text-white px-3 py-1 rounded-md text-xs font-semibold">Hybrid</button>
+                        <button type="button" onclick="setCategory('City', this)"
+                                class="cat-btn text-zinc-400 hover:text-white px-3 py-1 rounded-md text-xs font-semibold">City</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Bike Grid -->
-            <div id="bikeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div th:each="b : ${availableBikes}" 
-                     th:data-model="${(b.model != null ? b.model : '') + ' ' + b.id}" 
-                     th:data-category="${b.category}"
-                     class="bike-card bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition p-6 flex flex-col justify-between">
-                    
+            <!-- Bicycle Grid -->
+            <div id="bikeGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div th:each="b : ${availableBikes}"
+                     th:attr="data-model=${b.model}, data-id=${b.id}, data-cat=${b.category}"
+                     class="bike-card bg-stone-100 border border-stone-300/80 hover:border-zinc-500 rounded-xl p-4 transition flex flex-col justify-between">
                     <div>
-                        <div class="bg-blue-50/70 rounded-xl p-6 mb-4 flex items-center justify-center relative">
-                            <i data-lucide="bike" class="w-16 h-16 text-blue-600"></i>
-                            <span class="absolute top-3 left-3 text-[10px] font-mono text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100" th:text="${b.id}">BIK001</span>
-                        </div>
+                        <!-- Top Spec Header -->
+                        <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+                            <span class="font-mono text-xs font-bold bg-zinc-900 text-white px-2.5 py-1 rounded"
+                                  th:text="${b.id}">BIK101</span>
 
-                        <div class="flex justify-between items-start mb-1">
-                            <h3 class="font-bold text-gray-900 text-lg" th:text="${b.model != null ? b.model : 'Bike ' + b.id}">Bike BIK20260104</h3>
-                            <span th:classappend="${b.status == 'Available'} ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
-                                  class="px-2.5 py-1 font-semibold text-xs rounded-full" 
+                            <span th:classappend="${b.status == 'Available'} ? 'bg-emerald-500/15 text-emerald-800 border-emerald-500/30' : 'bg-amber-500/15 text-amber-900 border-amber-500/30'"
+                                  class="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border"
                                   th:text="${b.status}">Available</span>
                         </div>
-                        <p class="text-xs text-gray-400 mb-4" th:text="'Category: ' + ${b.category}">Category: Mountain</p>
+
+                        <!-- Bike Title & Category -->
+                        <div class="mt-3">
+                            <span class="text-[10px] font-mono uppercase tracking-wider text-stone-500" th:text="${b.category}">Mountain</span>
+                            <h3 class="font-bold text-zinc-900 text-base mt-0.5" th:text="${b.model}">Cannondale Trail 8</h3>
+                        </div>
                     </div>
 
-                    <div class="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <!-- Rate & Action Footer -->
+                    <div class="mt-5 pt-3.5 border-t border-stone-200 flex items-center justify-between">
                         <div>
-                            <span class="text-xs text-gray-400 block">Rate</span>
-                            <span class="text-lg font-extrabold text-blue-600" th:text="'₱' + (${b.ratePerHour > 0} ? ${b.ratePerHour} : '150.0') + '/hr'">₱150.0/hr</span>
+                            <span class="text-[10px] font-mono uppercase text-stone-500 block">Hourly Rate</span>
+                            <span class="text-base font-extrabold font-mono text-zinc-900"
+                                  th:text="'₱' + ${b.ratePerHour} + '/hr'">₱200.0/hr</span>
                         </div>
 
-                        <!-- Card Action Buttons: Details + Rent Now -->
                         <div class="flex items-center gap-2">
                             <button type="button"
-                                    th:data-id="${b.id}"
-                                    th:data-model="${b.model != null ? b.model : 'Bike ' + b.id}"
-                                    th:data-cat="${b.category}"
-                                    th:data-rate="${b.ratePerHour > 0 ? b.ratePerHour : 150.0}"
-                                    onclick="openDetailsModal(this)"
-                                    class="bg-slate-100 hover:bg-slate-200 text-gray-700 px-3 py-2.5 rounded-xl font-semibold text-xs transition"
-                                    title="View Bike Specs">
-                                Details
+                                    th:attr="data-id=${b.id}, data-model=${b.model}, data-cat=${b.category}, data-rate=${b.ratePerHour}, data-status=${b.status}"
+                                    onclick="openDetails(this)"
+                                    class="bg-stone-200 hover:bg-stone-300 text-zinc-800 font-semibold text-xs px-3 py-2 rounded-lg transition">
+                                Specs
                             </button>
 
-                            <button th:if="${b.status == 'Available'}" type="button"
-                                    th:data-id="${b.id}"
-                                    th:data-model="${b.model != null ? b.model : 'Bike ' + b.id}"
-                                    th:data-rate="${b.ratePerHour > 0 ? b.ratePerHour : 150.0}"
-                                    onclick="openRentModal(this)"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-semibold text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-1.5">
-                                <i data-lucide="key" class="w-4 h-4"></i> Rent Now
+                            <button type="button"
+                                    th:if="${b.status == 'Available'}"
+                                    th:attr="data-id=${b.id}, data-model=${b.model}, data-rate=${b.ratePerHour}"
+                                    onclick="openRent(this)"
+                                    class="bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-xs px-3.5 py-2 rounded-lg transition">
+                                Rent Bike
                             </button>
 
-                            <button th:if="${b.status != 'Available'}" disabled
-                                    class="bg-gray-100 text-gray-400 cursor-not-allowed px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1">
-                                <i data-lucide="lock" class="w-3.5 h-3.5"></i> Unavailable
+                            <button type="button"
+                                    th:if="${b.status != 'Available'}"
+                                    disabled
+                                    class="bg-stone-200 text-stone-400 font-semibold text-xs px-3.5 py-2 rounded-lg cursor-not-allowed">
+                                In Use
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- RENTAL HISTORY & RECEIPTS -->
-        <div id="history" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <i data-lucide="receipt" class="w-5 h-5 text-blue-600"></i> My Rental History & Receipts
-            </h2>
-
-            <div th:if="${pastRentals == null or #lists.isEmpty(pastRentals)}" class="text-center py-6 text-xs text-gray-400">
-                No completed rentals yet. Rent a bike above to get started!
+        <!-- Past Rental Ledger -->
+        <section id="history-section" class="bg-stone-100 border border-stone-300/80 rounded-xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-zinc-900 text-white border-b border-zinc-800 flex items-center justify-between">
+                <h2 class="text-xs font-mono font-bold uppercase tracking-wider text-zinc-200">Completed Ride Ledger</h2>
+                <span class="text-[11px] font-mono text-zinc-400"
+                      th:text="${pastRentals != null ? #lists.size(pastRentals) + ' records' : '0 records'}">0 records</span>
             </div>
 
-            <div th:if="${pastRentals != null and !#lists.isEmpty(pastRentals)}" class="overflow-x-auto">
+            <div th:if="${pastRentals == null || #lists.isEmpty(pastRentals)}" class="text-xs text-stone-500 p-6 text-center">
+                No completed trips logged yet. Select a bicycle above to start riding.
+            </div>
+
+            <div th:if="${pastRentals != null && !#lists.isEmpty(pastRentals)}" class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
-                        <tr class="border-b border-gray-100 text-gray-400 uppercase">
-                            <th class="py-3 px-2">Rental ID</th>
-                            <th class="py-3 px-2">Bike ID</th>
-                            <th class="py-3 px-2">Date</th>
-                            <th class="py-3 px-2">Status</th>
-                            <th class="py-3 px-2 text-right">Receipt</th>
+                        <tr class="border-b border-stone-200 bg-stone-200/70 text-[10px] font-mono font-bold uppercase text-stone-600">
+                            <th class="py-2.5 px-5">Rental Ref</th>
+                            <th class="py-2.5 px-4">Bike Unit</th>
+                            <th class="py-2.5 px-4">Status</th>
+                            <th class="py-2.5 px-5 text-right">Receipt</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50">
-                        <tr th:each="h : ${pastRentals}" class="hover:bg-slate-50">
-                            <td class="py-3 px-2 font-mono font-semibold text-gray-700" th:text="${h.id}">RNT001</td>
-                            <td class="py-3 px-2 text-gray-600" th:text="${h.bikeId}">BIK001</td>
-                            <td class="py-3 px-2 text-gray-500" th:text="${h.startTime != null ? #temporals.format(h.startTime, 'MMM dd, yyyy') : '2026'}">Nov 14, 2026</td>
-                            <td class="py-3 px-2">
-                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full" th:text="${h.status}">PAID</span>
+                    <tbody class="divide-y divide-stone-200">
+                        <tr th:each="p : ${pastRentals}" class="hover:bg-stone-200/50">
+                            <td class="py-3 px-5 font-mono font-semibold text-zinc-800" th:text="${p.id}">RNT001</td>
+                            <td class="py-3 px-4 font-mono font-bold text-zinc-900" th:text="${p.bikeId}">BIK101</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-800 border border-emerald-500/30"
+                                      th:text="${p.status}">PAID &amp; COMPLETED</span>
                             </td>
-                            <td class="py-3 px-2 text-right">
-                                <a th:href="@{'/receipt/' + ${h.id}}" class="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
-                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Receipt
-                                </a>
+                            <td class="py-3 px-5 text-right">
+                                <a th:href="@{'/receipt/' + ${p.id}}"
+                                   class="font-semibold text-amber-800 hover:text-zinc-950 hover:underline">Open Receipt &nearr;</a>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- ================= MODAL 1: RENT & CHECKOUT MODAL ================= -->
-    <div id="rentModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900">Confirm Bike Rental</h3>
-                <button type="button" onclick="closeModal('rentModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+    </main>
+
+    <!-- RENT MODAL -->
+    <div id="rentModal" class="fixed inset-0 bg-zinc-950/75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-stone-100 border border-stone-300 rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div class="bg-zinc-900 text-white px-5 py-4 flex items-center justify-between border-b border-zinc-800">
+                <h3 class="text-sm font-bold">Confirm Bicycle Dispatch</h3>
+                <button type="button" onclick="closeModal('rentModal')" class="text-zinc-400 hover:text-white text-lg font-bold">&times;</button>
             </div>
 
-            <form th:action="@{/rent-bike}" method="post" class="space-y-4">
-                <input type="hidden" name="bikeId" id="modalBikeId" />
+            <form th:action="@{/rent-bike}" method="post" class="p-5 space-y-4">
+                <input type="hidden" name="bikeId" id="rentBikeId">
 
-                <div class="bg-blue-50 p-4 rounded-2xl flex items-center justify-between">
+                <div class="bg-zinc-900 text-white rounded-lg p-4 flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-blue-600 font-semibold" id="modalBikeCode">BIK20260104</p>
-                        <p class="font-bold text-gray-900" id="modalBikeName">Bike Name</p>
+                        <span class="text-[10px] font-mono uppercase text-amber-400" id="rentBikeCode">BIK101</span>
+                        <p class="text-sm font-bold mt-0.5" id="rentBikeModel">Bicycle Model</p>
                     </div>
-                    <p class="text-lg font-extrabold text-blue-600">₱<span id="modalBikeRate">150.0</span>/hr</p>
+                    <div class="text-right font-mono">
+                        <span class="text-[10px] text-zinc-400 block">RATE</span>
+                        <span class="text-sm font-bold text-white">₱<span id="rentBikeRate">150</span>/hr</span>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Select Duration (Hours)</label>
-                    <select name="hours" id="modalHours" onchange="updateTotal()"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-500">
-                        <option value="1">1 Hour</option>
-                        <option value="2">2 Hours</option>
-                        <option value="4">4 Hours (Half Day)</option>
-                        <option value="8">8 Hours (Full Day)</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-mono font-bold uppercase text-stone-600 mb-1">Duration</label>
+                        <select name="hours" id="rentHours" onchange="updateTotal()"
+                                class="w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-900">
+                            <option value="1">1 Hour</option>
+                            <option value="2">2 Hours</option>
+                            <option value="3">3 Hours</option>
+                            <option value="5">5 Hours</option>
+                            <option value="8">8 Hours (Full Day)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-mono font-bold uppercase text-stone-600 mb-1">Payment</label>
+                        <select name="paymentMethod"
+                                class="w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-900">
+                            <option value="GCash">GCash</option>
+                            <option value="Cash at Station">Cash at Station</option>
+                            <option value="Maya">Maya</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Payment Method</label>
-                    <select name="paymentMethod"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-500">
-                        <option value="GCash">GCash E-Wallet</option>
-                        <option value="Maya">Maya</option>
-                        <option value="Cash at Station">Cash at Station</option>
-                        <option value="Credit/Debit Card">Credit / Debit Card</option>
-                    </select>
+                <div class="bg-stone-200 border border-stone-300 rounded-lg px-4 py-3 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-stone-700">Estimated Total</span>
+                    <span class="text-base font-extrabold font-mono text-zinc-900" id="rentTotalDisplay">₱150.00</span>
                 </div>
 
-                <div class="bg-slate-50 p-3.5 rounded-xl flex items-center justify-between text-sm">
-                    <span class="text-gray-500 font-medium">Estimated Total:</span>
-                    <span class="text-xl font-extrabold text-gray-900">₱<span id="modalTotal">150.00</span></span>
-                </div>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal('rentModal')" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-xs">Cancel</button>
-                    <button type="submit" class="w-2/3 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/25">Confirm & Start Ride</button>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('rentModal')"
+                            class="px-4 py-2 rounded-lg bg-stone-200 text-xs font-semibold text-stone-800 hover:bg-stone-300">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold">
+                        Confirm &amp; Start Ride
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ================= MODAL 2: BIKE DETAILS MODAL ================= -->
-    <div id="detailsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900" id="detTitle">Bike Specifications</h3>
-                <button type="button" onclick="closeModal('detailsModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+    <!-- DETAILS MODAL -->
+    <div id="detailsModal" class="fixed inset-0 bg-zinc-950/75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-stone-100 border border-stone-300 rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
+            <div class="bg-zinc-900 text-white px-5 py-4 flex items-center justify-between border-b border-zinc-800">
+                <h3 class="text-sm font-bold">Unit Specifications</h3>
+                <button type="button" onclick="closeModal('detailsModal')" class="text-zinc-400 hover:text-white text-lg font-bold">&times;</button>
             </div>
-            <div class="space-y-2 text-xs text-gray-600">
-                <p><strong>Bike ID:</strong> <span id="detId" class="font-mono"></span></p>
-                <p><strong>Category:</strong> <span id="detCat"></span></p>
-                <p><strong>Hourly Rate:</strong> ₱<span id="detRate"></span>/hr</p>
-                <p><strong>Frame & Gears:</strong> Lightweight Alloy Frame • 21-Speed Shimano • Disc Brakes</p>
-                <p><strong>Pickup Hub:</strong> Davao Main Bike Station (Free Helmet Included)</p>
+            <div class="p-5 space-y-2 text-xs">
+                <div class="flex justify-between py-1.5 border-b border-stone-200">
+                    <span class="text-stone-500">Unit ID</span>
+                    <span class="font-mono font-bold text-zinc-900" id="detId">BIK101</span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-stone-200">
+                    <span class="text-stone-500">Model</span>
+                    <span class="font-bold text-zinc-900" id="detModel">Model</span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-stone-200">
+                    <span class="text-stone-500">Category</span>
+                    <span class="font-semibold text-zinc-800" id="detCat">Category</span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-stone-200">
+                    <span class="text-stone-500">Rate</span>
+                    <span class="font-mono font-bold text-zinc-900" id="detRate">₱150/hr</span>
+                </div>
+                <div class="flex justify-between py-1.5">
+                    <span class="text-stone-500">Dock Status</span>
+                    <span class="font-mono font-bold text-emerald-700" id="detStatus">Available</span>
+                </div>
+                <button type="button" onclick="closeModal('detailsModal')"
+                        class="w-full mt-3 py-2 rounded-lg bg-zinc-900 text-white text-xs font-bold">Close</button>
             </div>
-            <button type="button" onclick="closeModal('detailsModal')" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-semibold text-xs">Close</button>
         </div>
     </div>
 
-    <!-- ================= MODAL 3: REPORT ISSUE MODAL ================= -->
-    <div id="issueModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900">Report Bike / Support Issue</h3>
-                <button type="button" onclick="closeModal('issueModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+    <!-- PROFILE MODAL -->
+    <div id="profileModal" class="fixed inset-0 bg-zinc-950/75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-stone-100 border border-stone-300 rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
+            <div class="bg-zinc-900 text-white px-5 py-4 flex items-center justify-between border-b border-zinc-800">
+                <h3 class="text-sm font-bold">Rider Pass Profile</h3>
+                <button type="button" onclick="closeModal('profileModal')" class="text-zinc-400 hover:text-white text-lg font-bold">&times;</button>
             </div>
-            <form th:action="@{/report-issue}" method="post" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Bike ID</label>
-                    <input type="text" name="bikeId" id="issueBikeId" readonly class="w-full bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-mono">
+            <div class="p-5 space-y-4">
+                <div class="bg-stone-200 border border-stone-300 rounded-lg p-3.5 text-xs space-y-1">
+                    <p class="text-stone-500">Signed in as</p>
+                    <p class="text-sm font-bold text-zinc-900" th:text="${username != null ? username : 'Rider'}">alec</p>
+                    <p class="text-[11px] font-mono text-emerald-800 pt-1">Status: Verified Station Rider</p>
                 </div>
+                <button type="button" onclick="closeModal('profileModal')"
+                        class="w-full py-2 rounded-lg bg-zinc-900 text-white text-xs font-bold">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT MODAL -->
+    <div id="reportModal" class="fixed inset-0 bg-zinc-950/75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-stone-100 border border-stone-300 rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div class="bg-zinc-900 text-white px-5 py-4 flex items-center justify-between border-b border-zinc-800">
+                <h3 class="text-sm font-bold">Report Bike / Station Issue</h3>
+                <button type="button" onclick="closeModal('reportModal')" class="text-zinc-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            <form onsubmit="event.preventDefault(); closeModal('reportModal'); alert('Support ticket sent to station desk.');" class="p-5 space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Describe Issue</label>
-                    <textarea name="issueNote" rows="3" required placeholder="e.g. Flat tire, brake adjustment needed, lock stuck..."
-                              class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs outline-none focus:border-blue-500"></textarea>
+                    <label class="block text-[11px] font-mono font-bold uppercase text-stone-600 mb-1">Issue Description</label>
+                    <textarea rows="3" required placeholder="Describe tire, brake, or lock issue..."
+                              class="w-full bg-stone-50 border border-stone-300 rounded-lg p-2.5 text-xs text-zinc-900"></textarea>
                 </div>
-                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-xs">Submit Report</button>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('reportModal')"
+                            class="px-3.5 py-2 rounded-lg bg-stone-200 text-xs font-semibold text-stone-800">Cancel</button>
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg bg-amber-400 text-zinc-950 text-xs font-bold">Submit Report</button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- ================= MODAL 4: EDIT PROFILE MODAL ================= -->
-    <div id="profileModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900">Account Settings</h3>
-                <button type="button" onclick="closeModal('profileModal')" class="text-gray-400 hover:text-gray-700 font-bold">✕</button>
-            </div>
-            <form th:action="@{/update-profile}" method="post" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Display Name</label>
-                    <input type="text" name="newName" th:value="${username}" required
-                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">New Password (leave blank to keep current)</label>
-                    <input type="password" name="newPassword" placeholder="••••••••"
-                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs">Save Changes</button>
-            </form>
-        </div>
-    </div>
-
+    <!-- Live Countdown, Search & Modal Scripts -->
     <script>
         lucide.createIcons();
-        let selectedCategory = 'ALL';
-        let currentHourlyRate = 150.0;
 
-        function setCategory(cat) {
-            selectedCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                if (btn.textContent.trim().toUpperCase() === cat.toUpperCase()) {
-                    btn.className = 'cat-btn bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold transition';
-                } else {
-                    btn.className = 'cat-btn bg-white text-gray-600 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-gray-50 transition';
-                }
+        let activeCategory = 'ALL';
+        let currentHourlyRate = 0;
+
+        function updateRiderClock() {
+            const el = document.getElementById('riderLiveClock');
+            if (el) {
+                el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+        }
+
+        function openModal(id) {
+            const m = document.getElementById(id);
+            if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+        }
+
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+        }
+
+        function openRent(btn) {
+            const id = btn.getAttribute('data-id');
+            const model = btn.getAttribute('data-model');
+            const rate = parseFloat(btn.getAttribute('data-rate')) || 0;
+            currentHourlyRate = rate;
+
+            document.getElementById('rentBikeId').value = id;
+            document.getElementById('rentBikeCode').textContent = id;
+            document.getElementById('rentBikeModel').textContent = model;
+            document.getElementById('rentBikeRate').textContent = rate.toFixed(2);
+            document.getElementById('rentHours').value = '1';
+            updateTotal();
+            openModal('rentModal');
+        }
+
+        function updateTotal() {
+            const hrs = parseInt(document.getElementById('rentHours').value) || 1;
+            const total = currentHourlyRate * hrs;
+            document.getElementById('rentTotalDisplay').textContent = '₱' + total.toFixed(2);
+        }
+
+        function openDetails(btn) {
+            document.getElementById('detId').textContent = btn.getAttribute('data-id');
+            document.getElementById('detModel').textContent = btn.getAttribute('data-model');
+            document.getElementById('detCat').textContent = btn.getAttribute('data-cat');
+            document.getElementById('detRate').textContent = '₱' + btn.getAttribute('data-rate') + '/hr';
+            document.getElementById('detStatus').textContent = btn.getAttribute('data-status');
+            openModal('detailsModal');
+        }
+
+        function setCategory(cat, btn) {
+            activeCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.className = 'cat-btn text-zinc-400 hover:text-white px-3 py-1 rounded-md text-xs font-semibold';
             });
+            btn.className = 'cat-btn bg-amber-400 text-zinc-950 px-3 py-1 rounded-md text-xs font-bold';
             filterBikes();
         }
 
         function filterBikes() {
-            const query = document.getElementById('bikeSearch').value.toLowerCase();
+            const q = (document.getElementById('bikeSearch').value || '').toLowerCase().trim();
             document.querySelectorAll('.bike-card').forEach(card => {
                 const model = (card.getAttribute('data-model') || '').toLowerCase();
-                const category = (card.getAttribute('data-category') || '').toLowerCase();
-                const matchesSearch = model.includes(query);
-                const matchesCat = (selectedCategory === 'ALL') || (category === selectedCategory.toLowerCase());
-                card.style.display = (matchesSearch && matchesCat) ? 'flex' : 'none';
+                const id = (card.getAttribute('data-id') || '').toLowerCase();
+                const cat = card.getAttribute('data-cat') || '';
+                const matchSearch = !q || model.includes(q) || id.includes(q);
+                const matchCat = activeCategory === 'ALL' || cat === activeCategory;
+                card.style.display = (matchSearch && matchCat) ? '' : 'none';
             });
         }
 
-        function openRentModal(btn) {
-            const id = btn.getAttribute('data-id');
-            const model = btn.getAttribute('data-model');
-            currentHourlyRate = parseFloat(btn.getAttribute('data-rate')) || 150.0;
+        function updateCustomerTimers() {
+            const now = new Date().getTime();
+            document.querySelectorAll('.rental-countdown').forEach(box => {
+                const dueStr = box.getAttribute('data-due');
+                const rentalId = box.getAttribute('data-rental-id');
+                if (!dueStr) return;
 
-            document.getElementById('modalBikeId').value = id;
-            document.getElementById('modalBikeCode').textContent = id;
-            document.getElementById('modalBikeName').textContent = model;
-            document.getElementById('modalBikeRate').textContent = currentHourlyRate.toFixed(1);
-            document.getElementById('modalHours').value = "1";
-            updateTotal();
-            document.getElementById('rentModal').classList.remove('hidden');
+                const dueTime = new Date(dueStr).getTime();
+                const diff = dueTime - now;
+
+                const valueEl = box.querySelector('.timer-value');
+                const labelEl = box.querySelector('.timer-label');
+                const badgeEl = document.getElementById('status-badge-' + rentalId);
+                const cardEl = document.getElementById('rental-card-' + rentalId);
+
+                if (diff > 0) {
+                    const h = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+                    const m = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                    const s = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+
+                    labelEl.textContent = 'Time Remaining';
+                    valueEl.textContent = `${h}h ${m}m ${s}s left`;
+                    valueEl.className = 'text-sm font-extrabold text-zinc-900 font-mono tabular-nums timer-value';
+                } else {
+                    const over = Math.abs(diff);
+                    const h = String(Math.floor(over / (1000 * 60 * 60))).padStart(2, '0');
+                    const m = String(Math.floor((over % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                    const s = String(Math.floor((over % (1000 * 60)) / 1000)).padStart(2, '0');
+
+                    labelEl.textContent = 'Overdue By';
+                    labelEl.className = 'block text-[9px] font-mono font-bold uppercase tracking-wider text-rose-600 timer-label';
+                    valueEl.textContent = `${h}h ${m}m ${s}s`;
+                    valueEl.className = 'text-sm font-extrabold text-rose-600 font-mono tabular-nums timer-value';
+                    box.className = 'rental-countdown bg-rose-50 border border-rose-200 px-3.5 py-1.5 rounded-lg text-left sm:text-right min-w-[155px]';
+
+                    if (badgeEl) {
+                        badgeEl.textContent = 'OVERDUE';
+                        badgeEl.className = 'px-2 py-0.5 rounded border text-[10px] font-mono font-bold uppercase bg-rose-500/15 text-rose-700 border-rose-500/30 animate-pulse';
+                    }
+                    if (cardEl) {
+                        cardEl.classList.remove('border-l-emerald-500');
+                        cardEl.classList.add('border-l-rose-600', 'bg-rose-500/5');
+                    }
+                }
+            });
         }
 
-        function updateTotal() {
-            const hrs = parseInt(document.getElementById('modalHours').value) || 1;
-            document.getElementById('modalTotal').textContent = (hrs * currentHourlyRate).toFixed(2);
-        }
-
-        function openDetailsModal(btn) {
-            document.getElementById('detId').textContent = btn.getAttribute('data-id');
-            document.getElementById('detTitle').textContent = btn.getAttribute('data-model');
-            document.getElementById('detCat').textContent = btn.getAttribute('data-cat');
-            document.getElementById('detRate').textContent = btn.getAttribute('data-rate');
-            document.getElementById('detailsModal').classList.remove('hidden');
-        }
-
-        function openIssueModal(bikeId) {
-            document.getElementById('issueBikeId').value = bikeId;
-            document.getElementById('issueModal').classList.remove('hidden');
-        }
-
-        function openProfileModal() {
-            document.getElementById('profileModal').classList.remove('hidden');
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
+        updateRiderClock();
+        updateCustomerTimers();
+        setInterval(() => {
+            updateRiderClock();
+            updateCustomerTimers();
+        }, 1000);
     </script>
 </body>
 </html>
