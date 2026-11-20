@@ -26,7 +26,7 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Reset and Seed 105 Bikes (Meets 100+ minimum requirement with @Version = 0)
+        
         bikeRepository.deleteAll();
         String[] models = {"Trek Marlin 5", "Giant Escape 3", "Specialized Sirrus", "Cannondale Trail 8", "Merida Crossway"};
         String[] categories = {"Mountain", "City", "Hybrid", "Mountain", "Hybrid"};
@@ -46,7 +46,6 @@ public class DataSeeder implements CommandLineRunner {
         }
         bikeRepository.saveAll(bikes);
 
-        // 2. Reset and Seed 105 Users (Meets 100+ minimum requirement with @Version = 0)
         userRepository.deleteAll();
         List<User> users = new ArrayList<>();
         String customPassword = passwordEncoder.encode("christian123");

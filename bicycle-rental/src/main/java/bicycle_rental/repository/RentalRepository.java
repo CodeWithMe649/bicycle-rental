@@ -9,7 +9,6 @@ import bicycle_rental.model.Rental;
 
 public interface RentalRepository extends MongoRepository<Rental, String> {
 
-    // MongoDB $lookup (Equivalent to SQL LEFT JOIN across rentals, bikes, and users)
     @Aggregation(pipeline = {
         "{ '$lookup': { 'from': 'bikes', 'localField': 'bikeId', 'foreignField': '_id', 'as': 'bikeDetails' } }",
         "{ '$unwind': { 'path': '$bikeDetails', 'preserveNullAndEmptyArrays': true } }",
